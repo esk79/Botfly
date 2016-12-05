@@ -71,6 +71,7 @@ def serve(sock):
         for line in readSocket(sock):
             proc.stdin.write(line.encode('UTF-8'))
 
+    # make thread for each function + one to send json with output to server
     pollSock()
 
 
