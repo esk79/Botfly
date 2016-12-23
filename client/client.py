@@ -8,6 +8,7 @@ import shutil
 import time
 import json
 import threading
+from multiprocessing import Process
 
 try:
     from StringIO import StringIO
@@ -18,9 +19,10 @@ HOST = 'localhost'
 PORT = 1708
 
 class ByteLock:
-    def __init__(self):
+    def __init__(self, sock):
         self.bytes = b''
         self.bytelock = threading.Lock()
+        self.sock = sock
 
     def write(self,bytes):
         with self.bytelock:
@@ -31,6 +33,16 @@ class ByteLock:
             temp = self.bytes
             self.bytes = b''
             return temp
+
+    def writeLoop(self,delay=0.1):
+        while True:
+            time.sleep(delay)
+            buff = self.getAndClear()
+            if len(buff)>0:
+                outputdict = dict(output=buff.decode('UTF-8'))
+                json_dict = json.dumps(outputdict)
+                self.sock.sendall(json_dict.encode('UTF-8'))
+
 
 def main():
     while True:
@@ -53,7 +65,7 @@ def main():
         time.sleep(60)
 
 def serve(sock):
-    bytelock = ByteLock()
+    bytelock = ByteLock(sock)
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
@@ -72,8 +84,15 @@ def serve(sock):
             proc.stdin.write(line.encode('UTF-8'))
 
     # make thread for each function + one to send json with output to server
-    pollSock()
-
+    p1 = Process(target=pollSock)
+    p2 = Process(target=pollProc)
+    p3 = Process(target=bytelock.writeLoop)
+    p1.start()
+    p2.start()
+    p3.start()
+    p2.join()
+    p3.join()
+    p1.join()
 
 
 def readSocket(sock,endchars='\n'):
@@ -90,7 +109,7 @@ def readSocket(sock,endchars='\n'):
                 buff = buffstr.encode('UTF-8')
                 yield line
         except Exception as e:
-            print("Exception: "+e)
+            print("Exception: "+str(e))
 
 def getInfo():
     proc = subprocess.Popen(["whoami"], stdout=subprocess.PIPE)
