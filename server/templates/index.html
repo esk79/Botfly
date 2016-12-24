@@ -73,7 +73,7 @@
             <div class="form-group">
                 <div class="input-group">
                     <!-- Find a way to make this class selectpicker and have it work-->
-                    <select class="form-control" id="bot" name="bot" style="width: 180px">
+                    <select class="form-control" id="bot" name="bot" style="width: 242px">
                         <option value="" disabled selected>Select bot...</option>
                         <option value="test2">test2</option>
                         {% for bot in bot_list %}
@@ -82,6 +82,8 @@
                     </select>
                 </div>
             </div>
+            <button type="button" class="btn btn-primary">Take Picture</button>
+            <button type="button" class="btn btn-primary">Do Other Stuff</button>
         </div>
         <!--</form>-->
 
@@ -108,18 +110,18 @@
             if (command == 'clear') {
                 term.clear();
             }
-            socket.emit('my_event', {data: command});
-            socket.removeAllListeners('my_event'); //Sloppy, fix this if can. should be outside terminal function ideally
+            socket.emit('send_command', {data: command});
+            socket.removeAllListeners('send_command'); //Sloppy, fix this if can. should be outside terminal function ideally
         }, {
             greetings: 'Botfly Terminal',
-            height: 700,
+            height: 800,
             width: 800,
             prompt: function (callback) {
                 callback('{{connected}}> ');
             },
         });
 
-         socket.on('my_response', function (msg) {
+         socket.on('response', function (msg) {
                 if (msg.data == 'error') {
                     terminal.error('error message');
                 } else if (msg.data != "Server generated event") {

