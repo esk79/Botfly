@@ -27,9 +27,6 @@
     <!-- Latest compiled and minified JavaScript -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.1/js/bootstrap-select.min.js"></script>
 
-    <!-- (Optional) Latest compiled and minified JavaScript translation files -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.12.1/js/i18n/defaults-*.min.js"></script>
-
     <script type="text/javascript"
             src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
 
@@ -73,65 +70,83 @@
 <div class="container">
     <div class="row">
         <div class="col-md-3">
-            <form class="form-inline" method="POST" action="#" onchange="this.form.submit();">
-                <div class="form-group">
-                    <div class="input-group">
-                        <!-- Find a way to make this class selectpicker and have it work-->
-                        <select class="form-control" name="bot">
-                            {% for bot in bot_list %}
-                            <option value="{{ bot }}">{{ bot }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+            <div class="form-group">
+                <div class="input-group">
+                    <!-- Find a way to make this class selectpicker and have it work-->
+                    <select class="form-control" id="bot" name="bot" style="width: 180px">
+                        <option value="" disabled selected>Select bot...</option>
+                        <option value="test2">test2</option>
+                        {% for bot in bot_list %}
+                        <option value="{{ bot }}">{{ bot }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-            </form>
-            <!--</form>-->
-
-            <div class="col-md-9">
-                <div id="terminal"></div>
             </div>
         </div>
-        <!-- /.row -->
+        <!--</form>-->
 
+        <div class="col-md-9">
+            <div id="terminal"></div>
+        </div>
     </div>
-    <!-- /.container -->
+    <!-- /.row -->
 
-    <script>
-        $(document).ready(function () {
+</div>
+<!-- /.container -->
+
+<script>
+    $(document).ready(function () {
 
 //        $('.selectpicker').selectpicker({
 //            size: false
 //        });
 
-            namespace = '/test';
-            socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
+        namespace = '/bot';
+        socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
 
-            $('#terminal').terminal(function (command, term) {
-                if (command == 'clear') {
-                    term.clear();
+        terminal = $('#terminal').terminal(function (command, term) {
+            if (command == 'clear') {
+                term.clear();
+            }
+            socket.emit('my_event', {data: command});
+            socket.removeAllListeners('my_event'); //Sloppy, fix this if can. should be outside terminal function ideally
+        }, {
+            greetings: 'Botfly Terminal',
+            height: 700,
+            width: 800,
+            prompt: function (callback) {
+                callback('{{connected}}> ');
+            },
+        });
+
+         socket.on('my_response', function (msg) {
+                if (msg.data == 'error') {
+                    terminal.error('error message');
+                } else if (msg.data != "Server generated event") {
+                    console.log(msg)
+                    console.log(msg.data)
+                    terminal.echo(msg.data);
                 }
+            });
 
-                socket.emit('my_event', {data: command});
-                socket.removeAllListeners('my_event'); //Sloppy, fix this if can. should be outside terminal function ideally
-
-                socket.on('my_response', function (msg) {
-                    if (msg.data == 'error') {
-                        term.error('error message');
-                    } else if (msg.data != "Server generated event") {
-                        console.log(msg)
-                        console.log(msg.data)
-                        term.echo(msg.data);
-                        socket.removeAllListeners('my_response'); //Sloppy, fix this if can. should be outside terminal function ideally
+        $(function () {
+            $('#bot').change(function () {
+                var value = $(this).val();
+                $.ajax({
+                    type: "POST",
+                    url: "#", // url to request
+                    data: {
+                        bot: value  // send data
+                    },
+                    success: function (data) {
+                        // populate data here
+                        location.reload();
                     }
                 });
-            }, {
-                greetings: 'Botfly Terminal',
-                height: 700,
-                width: 800,
-                prompt: 'botfly> '
             });
         });
-    </script>
+    });
+</script>
 
 </body>
 </html>
