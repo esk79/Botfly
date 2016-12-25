@@ -9,11 +9,8 @@ import time
 import json
 import threading
 import struct
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+try:from StringIO import StringIO
+except:from io import StringIO
 
 HOST = 'localhost'
 PORT = 1708
