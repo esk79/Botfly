@@ -74,8 +74,7 @@
                 <div class="input-group">
                     <!-- Find a way to make this class selectpicker and have it work-->
                     <select class="form-control" id="bot" name="bot" style="width: 242px">
-                        <option value="" disabled selected>Select bot...</option>
-                        <option value="test2">test2</option>
+                        <option value="default" disabled selected>Select bot...</option>
                         {% for bot in bot_list %}
                         <option value="{{ bot }}">{{ bot }}</option>
                         {% endfor %}
@@ -84,6 +83,7 @@
             </div>
             <button type="button" class="btn btn-primary">Take Picture</button>
             <button type="button" class="btn btn-primary">Do Other Stuff</button>
+            <p id="connection" style="padding-top: 10px"></p>
         </div>
         <!--</form>-->
 
@@ -97,11 +97,8 @@
 <!-- /.container -->
 
 <script>
+    //TODO: when done working move to seperate .js file
     $(document).ready(function () {
-
-//        $('.selectpicker').selectpicker({
-//            size: false
-//        });
 
         namespace = '/bot';
         socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
@@ -110,38 +107,57 @@
             if (command == 'clear') {
                 term.clear();
             }
+            //send terminal command to server
             socket.emit('send_command', {data: command});
             socket.removeAllListeners('send_command'); //Sloppy, fix this if can. should be outside terminal function ideally
         }, {
             greetings: 'Botfly Terminal',
             height: 800,
             width: 800,
+            //update prompt to be name of current user
             prompt: function (callback) {
                 callback('{{connected}}> ');
             },
         });
 
-         socket.on('response', function (msg) {
-                if (msg.data == 'error') {
-                    terminal.error('error message');
-                } else if (msg.data != "Server generated event") {
-                    console.log(msg)
-                    console.log(msg.data)
-                    terminal.echo(msg.data);
-                }
-            });
+        socket.on('response', function (msg) {
+            //no bot selected
+            if (msg.user == '') {
+                terminal.error('No bot selected.');
+                return;
+            }
+            //error returned from bot
+            if (msg.stderr != '') {
+                terminal.error(msg.stderr);
 
+                //bot disconnected
+                if (msg.stderr.includes('no longer connected.')) {
+                    console.log('see ya')
+                    $("#bot option[value='" + msg.user + "']").remove();
+                }
+            } else if (msg.stdout != "Server generated event") {
+                terminal.echo(msg.stdout);
+            }
+        });
+
+        //new connection received
+        socket.on('connection', function (msg) {
+            $('.col-md-3').append('<p class="conn-' + msg.user + '">' + 'New connection from: ' + msg.user + '</p>');
+            $('.conn-' + msg.user).fadeOut(5000);
+            $("#bot").append('<option value="' + msg.user + '">' + msg.user + '</option>')
+        });
+
+        //new bot selected
         $(function () {
             $('#bot').change(function () {
                 var value = $(this).val();
                 $.ajax({
                     type: "POST",
-                    url: "#", // url to request
+                    url: "#",
                     data: {
-                        bot: value  // send data
+                        bot: value
                     },
                     success: function (data) {
-                        // populate data here
                         location.reload();
                     }
                 });
