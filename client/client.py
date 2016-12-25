@@ -22,29 +22,33 @@ PORT = 1708
 
 class ByteLockBundler:
     def __init__(self, sock):
-        self.bytes = b''
+        self.stdoutbytes = b''
+        self.stderrbytes = b''
         self.sock = sock
         self.bytelock = threading.Lock()
 
     def setLock(self,lock):
         self.bytelock = lock
 
-    def write(self, wbytes):
-        print(self.bytes)
+    def writeStdout(self, wbytes):
         with self.bytelock:
-            self.bytes += wbytes
+            self.stdoutbytes += wbytes
+
+    def writeStderr(self, wbytes):
+        with self.bytelock:
+            self.stderrbytes += wbytes
 
     def getAndClear(self):
         with self.bytelock:
-            temp = self.bytes
-            self.bytes = b''
-            return temp
+            out,err = self.stdoutbytes, self.stderrbytes
+            self.stdoutbytes = b''
+            self.stderrbytes = b''
+            return out,err
 
     def writeBundle(self):
-        print(self.bytes)
-        buff = self.getAndClear()
-        if len(buff) > 0:
-            outputdict = dict(output=buff.decode('UTF-8'))
+        stdoutbuff, stderrbuff = self.getAndClear()
+        if len(stdoutbuff) > 0 or len(stderrbuff) > 0:
+            outputdict = dict(stdout=stdoutbuff.decode('UTF-8'),stderr=stderrbuff.decode('UTF-8'))
             json_dict = json.dumps(outputdict)
             self.sock.sendall(json_dict.encode('UTF-8'))
 
@@ -79,13 +83,21 @@ def serve(sock):
                             stderr=subprocess.PIPE)
 
     # Get commands from server, parse and send appropriate to proc
-    def pollProc():
+    def pollProcStdout():
         while True:
             out = proc.stdout.read(1)
             if out == '' and proc.poll() is not None:
                 break
             if out != '':
-                bytelock.write(out)
+                bytelock.writeStdout(out)
+
+    def pollProcStderr():
+        while True:
+            out = proc.stderr.read(1)
+            if out == '' and proc.poll() is not None:
+                break
+            if out != '':
+                bytelock.writeStderr(out)
 
     def pollSock():
         # TODO change to json for general formatting
@@ -101,15 +113,18 @@ def serve(sock):
 
     # make thread for each function + one to send json with output to server
     t_sock = threading.Thread(target=pollSock)
-    t_proc = threading.Thread(target=pollProc)
+    t_procout = threading.Thread(target=pollProcStdout)
+    t_procerr = threading.Thread(target=pollProcStderr)
     t_bndl = threading.Thread(target=writeBundles)
 
     t_sock.start()
-    t_proc.start()
+    t_procout.start()
+    t_procerr.start()
     t_bndl.start()
 
     t_sock.join()
-    t_proc.join()
+    t_procout.join()
+    t_procerr.join()
     t_bndl.join()
 
 
