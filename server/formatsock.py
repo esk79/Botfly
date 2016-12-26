@@ -65,3 +65,6 @@ class FormatSocket:
 
     def fileno(self):
         return self.sock.fileno()
+
+    def close(self):
+        return self.sock.close()

