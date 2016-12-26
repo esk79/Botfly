@@ -132,7 +132,8 @@ def serve(sock):
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
+                            stderr=subprocess.PIPE,
+                            cwd=os.path.expanduser("~"))
     # Get commands from server, parse and send appropriate to proc
     def pollProcStdout():
         while True:
