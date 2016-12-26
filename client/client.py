@@ -167,9 +167,7 @@ def serve(sock):
     def writeBundles():
         while True:
             time.sleep(0.2)
-            print("Sending?")
             bytelock.writeBundle()
-            print("Sent!")
 
     # make thread for each function + one to send json with output to server
     t_sock = threading.Thread(target=pollSock)
