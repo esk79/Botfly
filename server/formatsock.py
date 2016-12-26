@@ -44,7 +44,7 @@ class FormatSocket:
         while len(msg_data) < expected_size:
             sock_data = self.sock.recv(FormatSocket.RECV_SIZE)
             if len(sock_data) == 0:
-                raise Exception("Connection interrupted")
+                raise IOError("Connection interrupted")
 
             total_data += sock_data
             if expected_size == sys.maxsize and len(total_data) > FormatSocket.SIZE_BYTES:
@@ -62,3 +62,6 @@ class FormatSocket:
 
     def rawrecv(self,size):
         return self.sock.recv(size)
+
+    def fileno(self):
+        return self.sock.fileno()

