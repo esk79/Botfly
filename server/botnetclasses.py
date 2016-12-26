@@ -100,7 +100,7 @@ class BotServer(Thread):
             self.socketio.emit('connection', {'user': user}, namespace='/bot')
 
             # To test continuous stream, stdout is broken into multiple packets, hangs when waiting
-            self.botnet.getConnection(user).sendStdin('find /usr/local/lib\n')
+            # self.botnet.getConnection(user).sendStdin('find /usr/local/lib\n')
 
 class Bot:
     def __init__(self, sock, host_info):

