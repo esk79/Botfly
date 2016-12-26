@@ -70,8 +70,10 @@ class BotNet(Thread):
                 user = bot.user
                 try:
                     msg = bot.recv()
-                    print(msg)
                     # TODO: emit/broadcast this message to anyone on the <user> channel/room
+                    jsonobj = json.loads(msg.decode('UTF-8'))
+                    jsonobj['user'] = user
+                    self.socketio.emit('response', jsonobj,namespace="/bot")
                 except IOError:
                     # Connection was interrupted
                     # TODO: inform users
