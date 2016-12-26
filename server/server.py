@@ -94,10 +94,9 @@ if __name__ == "__main__":
     TCPSOCK.bind((HOST, PORT))
     botnet = BotNet(socketio)
     botserver = BotServer(TCPSOCK,botnet,socketio)
-    # botpinger = botnetclasses.BotPinger(botnet)
 
     botnet.start()
     botserver.start()
-    # botpinger.start()
+
 
     socketio.run(app, debug=True, use_reloader=False)

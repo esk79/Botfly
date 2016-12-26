@@ -29,7 +29,9 @@ class BotNet(Thread):
     def removeConnection(self, user):
         with self.connlock:
             if user in self.allConnections:
-                pass # terminate and remove
+                 # terminate and remove
+                self.socketio.emit('disconnect', {'user': user}, namespace='/bot')
+                print("[-] Lost connection to {}".format(bot.user))
             # Notify recv thread
 
     def getConnection(self,user):
@@ -37,19 +39,6 @@ class BotNet(Thread):
             if user in self.allConnections:
                 return self.allConnections[user]
             return None
-
-    # TODO: remove ping? I think sockets naturally will take care if it when using "select"
-    def ping(self):
-        with self.connlock:
-            for bot in self.allConnections.values():
-                # recv returns 0 if client disconnected
-                # TODO: send packet so that bot.sock.recv doesn't block
-                if not bot.sock.rawrecv(1024):
-                    # TODO: del is maybe a bit much, we should try to gracefully disconnect if possible
-                    # - Sumner
-                    del self.allConnections[bot.user]
-                    self.socketio.emit('disconnect', {'user': bot.user}, namespace='/bot')
-                    print("[-] Lost connection to {}".format(bot.user))
 
     def getConnections(self):
         with self.connlock:
@@ -133,16 +122,3 @@ class Bot:
         simultaneously
         '''
         return self.sock.fileno()
-
-
-# TODO: may not be necessary since we're using sockets
-# Background thread to check if we've lost any connections
-class BotPinger(Thread):
-    def __init__(self, botnet):
-        super().__init__()
-        self.botnet = botnet
-
-    def run(self):
-        while True:
-            self.botnet.ping()
-            time.sleep(60)
