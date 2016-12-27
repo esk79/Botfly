@@ -64,6 +64,7 @@ class BotNet(Thread):
                     msg = bot.recv()
                     jsonobj = json.loads(msg.decode('UTF-8'))
                     jsonobj['user'] = user
+                    jsonobj['stdout'] = jsonobj['stdout'].rstrip()
                     self.socketio.emit('response', jsonobj, namespace="/bot")
                 except IOError:
                     # Connection was interrupted
