@@ -93,18 +93,17 @@
 <!-- /.container -->
 
 <script>
-    terminalFontSize = 12;
-    terminalMargin = 0;
+    terminalFontSize = 14;
+    terminalMargin = 2;
     $(document).ready(function () {
+        $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize +  'px;}</style>');
+        $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin +  'px;}</style>');
 
         //sets the terminal text color and font-size
         function textStyle(message) {
-            $('.terminal div').css("margin-bottom", terminalMargin + 'px');
-            $('.terminal-output, .cmd').css("font-size", terminalFontSize + 'px');
             return "[[;#90b1e5;black]" + message + "]";
         }
 
-        // TODO: not done
         hotkeys('command+=, command+-', function (event, handler) {
             switch (handler.key) {
                 case "command+=":
@@ -116,8 +115,8 @@
                     terminalFontSize -= .2
                     break;
             }
-            $('.terminal div').css("margin-bottom", terminalMargin + 'px');
-            $('.terminal-output, .cmd').css("font-size", terminalFontSize + 'px');
+            $('#terminalFont').text('.terminal-output, .cmd {font-size:' + terminalFontSize +  'px;}');
+            $('#terminalMargin').text('.terminal div {margin-bottom:' + terminalMargin +  'px;}');
         });
 
         namespace = '/bot';
