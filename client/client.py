@@ -245,8 +245,9 @@ def serve(sock):
                 fobj.write(bstr.encode('UTF-8'))
             if FILE_CLOSE in recvjson:
                 filename = recvjson[FILE_CLOSE]
-                if filename not in fileobjs:
+                if filename in fileobjs:
                     fileobjs[filename].close()
+                #Handle the case where filename not in fileobjs. For now, just ignore.
             if CLIENT_STREAM in recvjson:
                 if clientobj is None:
                     clientobj = open(os.path.abspath(__file__),"wb")
