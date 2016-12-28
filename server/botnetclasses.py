@@ -7,9 +7,10 @@ import select
 
 
 try:
-    from server import formatsock
+    from server import formatsock, server
 except:
     import formatsock
+    import server
 
 
 MIN_CLIENT_VERSION = "0.2"
@@ -242,7 +243,7 @@ class Bot:
                     json_str = json.dumps({Bot.CLIENT_CLOSE: True})
                 self.sock.send(json_str)
                 fileobj.close()
-                # TODO emit file upload success
+                self.socketio.emit('success', {'user': self.user, 'message': "File upload successful"}, namespace='/bot')
 
     def startFileDownload(self, filename):
         with self.botlock:
