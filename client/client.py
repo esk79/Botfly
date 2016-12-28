@@ -21,6 +21,8 @@ PORT = 1708
 STDIN = "stdin"
 EVAL = "eval"
 CMD = "cmd"
+# Special
+LS_JSON = 'ls'
 # Client -> Server
 FILE_DOWNLOAD = 'down'
 # Server -> Client
@@ -97,6 +99,7 @@ class ByteLockBundler:
     def __init__(self, fsock):
         self.stdoutbytes = b''
         self.stderrbytes = b''
+        self.specialbytes = {}
         self.filebytes = {}
         self.fileclose = []
         self.fsock = fsock
@@ -117,6 +120,15 @@ class ByteLockBundler:
             else:
                 self.filebytes[filename] += wbytes
 
+    def writeSpecial(self, name, wbytes):
+        '''
+        Special commands must be sent in entirety
+        :param name: name of command
+        :param wbytes: bytes of command
+        '''
+        with self.lock:
+            self.specialbytes[name] = wbytes.decode('UTF-8')
+
     def closeFile(self, filename):
         with self.lock:
             if filename not in self.fileclose:
@@ -124,6 +136,14 @@ class ByteLockBundler:
 
     def getAndClear(self, bytesize=4096):
         with self.lock:
+
+            specs = {}
+            for specialname in self.specialbytes.keys():
+                if len(self.specialbytes[specialname]) <= bytesize:
+                    specs[specialname] = self.specialbytes[specialname]
+                    bytesize -= len(specs[specialname])
+            for specialname in specs.keys():
+                self.specialbytes.pop(specialname)
 
             out = self.stdoutbytes
             self.stdoutbytes = b''
@@ -161,17 +181,17 @@ class ByteLockBundler:
             for filename in filestream.keys():
                 filestream[filename] = filestream[filename].decode('UTF-8')
 
-            return out,err, filestream, fileclose
+            return out,err, filestream, fileclose, specs
 
     def writeBundle(self):
-        stdoutbuff, stderrbuff, filestream, fileclose = self.getAndClear()
+        stdoutbuff, stderrbuff, filestream, fileclose, specs = self.getAndClear()
         if len(stdoutbuff) > 0 or len(stderrbuff) > 0 or len(filestream)>0 or len(fileclose)>0:
             outputdict = dict(stdout=stdoutbuff,
                               stderr=stderrbuff,
                               filestreams=filestream,
-                              fileclose=fileclose)
+                              fileclose=fileclose,
+                              special=specs)
             json_str = json.dumps(outputdict)
-            print(json_str)
             self.fsock.send(json_str)
 
 # Scripts
@@ -227,6 +247,16 @@ def serve(sock):
         while RUNNING:
             recvbytes = sock.recv()
             recvjson = json.loads(recvbytes.decode('UTF-8'))
+
+            # Special LS command
+            if LS_JSON in recvjson:
+                filepath = os.path.expanduser(recvjson[LS_JSON])
+                if os.path.isdir(filepath):
+                    ls = os.listdir(filepath)
+                    for f in ls:
+                        print(f)
+
+            # Standard evaluation
             if STDIN in recvjson:
                 proc.stdin.write(recvjson[STDIN].encode('UTF-8'))
                 proc.stdin.flush()
@@ -236,6 +266,8 @@ def serve(sock):
                 newproc = subprocess.Popen(cmd_arr)
             if EVAL in recvjson:
                 eval(recvjson[EVAL])
+
+            # It is important that FILE_CLOSE comes *after* FILE_FILENAME
             if FILE_FILENAME in recvjson:
                 filename = recvjson[FILE_FILENAME]
                 if filename not in fileobjs:
@@ -248,6 +280,8 @@ def serve(sock):
                 if filename in fileobjs:
                     fileobjs[filename].close()
                 #Handle the case where filename not in fileobjs. For now, just ignore
+
+            # It is important that CLIENT_CLOSE comes *after* CLIENT_STREAM
             if CLIENT_STREAM in recvjson:
                 if clientobj is None:
                     clientobj = open(os.path.abspath(__file__),"wb")
@@ -259,8 +293,8 @@ def serve(sock):
                 proc.kill()
                 bytelock.fsock.close()
 
+            # Done last since this consumes thread until download completed
             if FILE_DOWNLOAD in recvjson:
-                print("Received filedownload command")
                 filename = recvjson[FILE_DOWNLOAD]
                 with open(filename,'rb') as f:
                     dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
