@@ -1,5 +1,4 @@
 import time
-import base64
 import json
 from threading import Thread, Condition
 from threading import Lock
@@ -165,6 +164,7 @@ class Bot:
         return self.sock.fileno()
 
     def sendFile(self, filename, fileobj):
+        # TODO: single worker thread instead of new one?
         t = Thread(target=self.__sendFileHelper(filename, fileobj))
         t.start()
 

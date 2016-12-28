@@ -8,7 +8,6 @@ import shutil
 import time
 import json
 import threading
-import base64
 import struct
 try:from StringIO import StringIO
 except:from io import StringIO
@@ -99,6 +98,10 @@ class ByteLockBundler:
             self.stderrbytes += wbytes
 
     def writeFileup(self, wbytes):
+        # TODO: come up with way to send file to server in chunks along with stdout
+        # Requirements: empty byte stream cannot indicate need to close file (since it's
+        # possible file read it too slow for socket thread
+        # Should not interrupt normal operation of stdout/stderr
         pass
 
     def getAndClear(self):
