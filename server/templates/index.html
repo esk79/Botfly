@@ -151,29 +151,26 @@
             if (msg.stderr != '') {
                 terminal.error(msg.stderr);
 
-                //bot disconnected
-                if (msg.stderr.includes('no longer connected.')) {
-                    $("#bot option[value='" + msg.user + "']").remove();
-                }
+//                //bot disconnected
+//                if (msg.stderr.includes('no longer connected.')) {
+//                    $("#bot option[value='" + msg.user + "']").remove();
+//                }
             } else if (msg.stdout != "Server generated event") {
                 terminal.echo(textStyle(msg.stdout));
             }
         });
 
-        function print_update(update, user) {
-            $('.col-md-3').append('<p class=' + update + user + '">' + 'New connection from: ' + user + '</p>');
-            $(update + user).fadeOut(5000);
-            $("#bot").append('<option value="' + user + '">' + user + '</option>')
-        }
-
         //new connection received
         socket.on('connection', function (msg) {
-            print_update('conn-', msg.user)
+            $('.col-md-3').append('<p class="conn-' + msg.user + '">' + 'New connection from: ' + msg.user + '</p>');
+            $('.conn-' + msg.user).fadeOut(5000);
+            $("#bot").append('<option value="' + msg.user + '">' + msg.user + '</option>')
         });
-
-        //bot disconnected
+        //repetitive code: will remove later
         socket.on('disconnect', function (msg) {
-            print_update('disconn-', msg.user)
+            $('.col-md-3').append('<p class="disconn-' + msg.user + '">' + 'Lost connection to: ' + msg.user + '</p>');
+            $('.disconn-' + msg.user).fadeOut(5000);
+            $("#bot option[value='" + msg.user + "']").remove();
         });
 
         //new bot selected
@@ -196,6 +193,11 @@
         //upload a file to the server
         $(function () {
             $('#upload-file').change(function () {
+                //no bot selected
+                if ('{{connected}}' == '') {
+                    terminal.error('No bot selected.');
+                    return;
+                }
                 var form_data = new FormData($('#upload-file')[0]);
                 $.ajax({
                     type: 'POST',
@@ -205,7 +207,11 @@
                     cache: false,
                     processData: false,
                     success: function (data) {
-                        console.log(data);
+                        if (JSON.parse(data).success) {
+                            terminal.echo(textStyle("File upload successful"))
+                        }else{
+                            terminal.error(textStyle("File upload failed"))
+                        }
                     },
                 });
             });
