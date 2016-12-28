@@ -3,10 +3,10 @@ body {
   /* Required pdding for .navbar-fixed-top. Remove if using .navbar-static-top. Change if height of navigation changes. */
 }
 
-.terminal div {
-  margin-bottom: 2px;
-}
+/*.terminal div {*/
+  /*margin-bottom: 2px;*/
+/*}*/
 
-.terminal-output, .cmd {
-  font-size: 1.2em !important;
-}
+/*.terminal-output, .cmd {*/
+  /*font-size: px;*/
+/*}*/
