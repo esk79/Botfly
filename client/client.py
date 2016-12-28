@@ -8,6 +8,7 @@ import shutil
 import time
 import json
 import threading
+import base64
 import struct
 try:from StringIO import StringIO
 except:from io import StringIO
@@ -19,6 +20,12 @@ PORT = 1708
 STDIN = "stdin"
 EVAL = "eval"
 CMD = "cmd"
+# Client -> Server
+FILE_DOWNLOAD = 'down'
+# Server -> Client
+FILE_STREAM = 'fstream'
+FILE_CLOSE = 'fclose'
+FILE_FILENAME = 'fname'
 
 # Supporting classes
 class FormatSocket:
@@ -81,7 +88,6 @@ class ByteLockBundler:
         self.stdoutbytes = b''
         self.stderrbytes = b''
         self.fsock = fsock
-        # Should improve with read-priority lock
         self.lock = threading.Lock()
 
     def writeStdout(self, wbytes):
@@ -91,6 +97,9 @@ class ByteLockBundler:
     def writeStderr(self, wbytes):
         with self.lock:
             self.stderrbytes += wbytes
+
+    def writeFileup(self, wbytes):
+        pass
 
     def getAndClear(self):
         with self.lock:
@@ -152,6 +161,7 @@ def serve(sock):
                 bytelock.writeStderr(out)
 
     def pollSock():
+        fileobjs = {}
         while True:
             recvbytes = sock.recv()
             recvjson = json.loads(recvbytes.decode('UTF-8'))
@@ -164,6 +174,20 @@ def serve(sock):
                 newproc = subprocess.Popen(cmd_arr)
             if EVAL in recvjson:
                 eval(recvjson[EVAL])
+            if FILE_FILENAME in recvjson:
+                filename = recvjson[FILE_FILENAME]
+                if filename not in fileobjs:
+                    fileobjs[filename] = open(filename,'wb')
+                fobj = fileobjs[filename]
+                bstr = recvjson[FILE_STREAM]
+                fobj.write(bstr.encode('UTF-8'))
+            if FILE_CLOSE in recvjson:
+                filename = recvjson[FILE_CLOSE]
+                if filename not in fileobjs:
+                    fileobjs[filename].close()
+            if FILE_DOWNLOAD in recvjson:
+                # TODO: send file to server
+                pass
 
     def writeBundles():
         while True:

