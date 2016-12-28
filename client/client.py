@@ -247,7 +247,7 @@ def serve(sock):
                 filename = recvjson[FILE_CLOSE]
                 if filename in fileobjs:
                     fileobjs[filename].close()
-                #Handle the case where filename not in fileobjs. For now, just ignore.
+                #Handle the case where filename not in fileobjs. For now, just ignore
             if CLIENT_STREAM in recvjson:
                 if clientobj is None:
                     clientobj = open(os.path.abspath(__file__),"wb")
