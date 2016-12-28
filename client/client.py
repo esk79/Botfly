@@ -92,9 +92,13 @@ class FormatSocket:
         self.sock.close()
 
 class ByteLockBundler:
+    PACKET_MAX_DAT = 4096
+
     def __init__(self, fsock):
         self.stdoutbytes = b''
         self.stderrbytes = b''
+        self.filebytes = {}
+        self.fileclose = []
         self.fsock = fsock
         self.lock = threading.Lock()
 
@@ -106,25 +110,68 @@ class ByteLockBundler:
         with self.lock:
             self.stderrbytes += wbytes
 
-    def writeFileup(self, wbytes):
-        # TODO: come up with way to send file to server in chunks along with stdout
-        # Requirements: empty byte stream cannot indicate need to close file (since it's
-        # possible file read it too slow for socket thread
-        # Should not interrupt normal operation of stdout/stderr
-        pass
-
-    def getAndClear(self):
+    def writeFileup(self, filename, wbytes):
         with self.lock:
-            out,err = self.stdoutbytes, self.stderrbytes
+            if filename not in self.filebytes:
+                self.filebytes[filename] = wbytes
+            else:
+                self.filebytes[filename] += wbytes
+
+    def closeFile(self, filename):
+        with self.lock:
+            if filename not in self.fileclose:
+                self.fileclose.append(filename)
+
+    def getAndClear(self, bytesize=4096):
+        with self.lock:
+
+            out = self.stdoutbytes
             self.stdoutbytes = b''
+            if len(out) > bytesize:
+                self.stdoutbytes = out[bytesize:]
+                out = out[:bytesize]
+            bytesize -= len(out)
+
+            err = self.stderrbytes
             self.stderrbytes = b''
-            return out,err
+            if len(err) > bytesize:
+                self.stderrbytes = err[bytesize:]
+                err = err[:bytesize]
+            bytesize -= len(err)
+
+            filestream = {}
+            fileclose = []
+            filenames = list(self.filebytes.keys())
+            for filename in filenames:
+                filebytes = self.filebytes[filename]
+                self.filebytes[filename] = b''
+                if len(filebytes) > bytesize:
+                    self.filebytes[filename] = filebytes[bytesize:]
+                    filebytes = filebytes[:bytesize]
+                elif filename in self.fileclose:
+                    self.fileclose.remove(filename)
+                    self.filebytes.pop(filename)
+                    fileclose.append(filename)
+                bytesize -= len(err)
+                filestream[filename] = filebytes
+
+            # Abuse python to convert to strings
+            out = out.decode('UTF-8')
+            err = err.decode('UTF-8')
+            for filename in filestream.keys():
+                filestream[filename] = filestream[filename].decode('UTF-8')
+
+            return out,err, filestream, fileclose
 
     def writeBundle(self):
-        stdoutbuff, stderrbuff = self.getAndClear()
-        if len(stdoutbuff) > 0 or len(stderrbuff) > 0:
-            outputdict = dict(stdout=stdoutbuff.decode('UTF-8'),stderr=stderrbuff.decode('UTF-8'))
+        stdoutbuff, stderrbuff, filestream, fileclose = self.getAndClear()
+        if len(stdoutbuff) > 0 or len(stderrbuff) > 0 or len(filestream)>0 or len(fileclose)>0:
+            outputdict = dict(stdout=stdoutbuff,
+                              stderr=stderrbuff,
+                              filestreams=filestream,
+                              fileclose=fileclose)
             json_str = json.dumps(outputdict)
+            print(json_str)
             self.fsock.send(json_str)
 
 # Scripts
@@ -212,8 +259,14 @@ def serve(sock):
                 bytelock.fsock.close()
 
             if FILE_DOWNLOAD in recvjson:
-                # TODO: send file to server
-                pass
+                print("Received filedownload command")
+                filename = recvjson[FILE_DOWNLOAD]
+                with open(filename,'rb') as f:
+                    dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
+                    while len(dat) > 0:
+                        bytelock.writeFileup(filename,dat)
+                        dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
+                    bytelock.closeFile(filename)
 
     def writeBundles():
         while RUNNING:

