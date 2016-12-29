@@ -1,4 +1,8 @@
-body {
-  padding-top: 70px;
-  /* Required pdding for .navbar-fixed-top. Remove if using .navbar-static-top. Change if height of navigation changes. */
+.navbar-nav li select {
+    margin-top: 7px;
+    height: 25px;
+}
+
+.btn-sm, .btn-xs, .dropdown-header, .dropdown-menu>li>a, .navbar, .table, table {
+    font-size:16px;
 }

