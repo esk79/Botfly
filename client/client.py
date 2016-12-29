@@ -195,7 +195,6 @@ class ByteLockBundler:
                               filestreams=filestream,
                               fileclose=fileclose,
                               special=specs)
-            print(outputdict)
             json_str = json.dumps(outputdict)
             self.fsock.send(json_str)
 

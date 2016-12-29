@@ -88,7 +88,6 @@
         </div>
     </div>
     <!-- /.row -->
-
 </div>
 <!-- /.container -->
 
@@ -107,12 +106,12 @@
         hotkeys('command+=, command+-', function (event, handler) {
             switch (handler.key) {
                 case "command+=":
-                    terminalMargin += .15
-                    terminalFontSize += .2
+                    terminalMargin += .15;
+                    terminalFontSize += .2;
                     break;
                 case "command+-":
-                    terminalMargin -= .15
-                    terminalFontSize -= .2
+                    terminalMargin -= .15;
+                    terminalFontSize -= .2;
                     break;
             }
             $('#terminalFont').text('.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}');
@@ -134,7 +133,7 @@
 
             //download file from bot
             var splitCommand = command.split(" ");
-            console.log(splitCommand)
+            console.log(splitCommand);
             if (splitCommand[0] == "download") {
                 if (splitCommand.length != 2) {
                     term.error("usage: download <filename>")
@@ -153,7 +152,7 @@
             //update prompt to be name of current user
             prompt: function (callback) {
                 callback('{{connected}}> ');
-            },
+            }
         });
 
         socket.on('response', function (msg) {
@@ -240,7 +239,7 @@
                     file: filename
                 },
                 success: function (data) {
-                    console.log(data)
+                    console.log(data);
                     var blob = new Blob([data]);
                     var link = document.createElement('a');
                     link.href = window.URL.createObjectURL(blob);
