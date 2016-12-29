@@ -179,7 +179,7 @@ class ByteLockBundler:
             out = out.decode('UTF-8')
             err = err.decode('UTF-8')
             for filename in filestream.keys():
-                filestream[filename] = filestream[filename].decode('UTF-8')
+                filestream[filename] = filestream[filename].decode("UTF-8")
 
             return out,err, filestream, fileclose, specs
 
@@ -257,7 +257,12 @@ def serve(sock):
                 filedict = {}
                 filepath = os.path.abspath(os.path.expanduser(recvjson[LS_JSON]))
                 if os.path.isdir(filepath):
-                    ls = os.listdir(filepath)
+                    try:
+                        #Throws exception when permission denied on folder
+                        ls = os.listdir(filepath)
+                    except:
+                        #TODO: proper error handling
+                        break
                     for f in (os.path.join(filepath,f) for f in ls):
                         retstat = os.stat(f)
                         retval = (os.path.isdir(f), retstat.st_mode, retstat.st_size)
