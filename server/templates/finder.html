@@ -16,33 +16,34 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/custom.css') }}">
     <!-- Include finder stylesheet -->
-    <link href="../static/css/finder.css" rel="stylesheet"/>
+    <link href="{{ url_for('static', filename='css/finder.css') }}" rel="stylesheet"/>
 
-    {% include 'nav.html' %}
+
 </head>
+{% include 'nav.html' %}
 <body data-gr-c-s-loaded="true">
 
-<div class="filemanager">
+    <div class="filemanager">
 
-    <div class="search input-group">
-        <input type="search" class="form-control" placeholder="Find a file...">
+        <div class="search input-group">
+            <input type="search" class="form-control" placeholder="Find a file...">
+        </div>
+
+        <div class="breadcrumbs"><span class="folderName"></span></div>
+
+        <ul class="data animated" style="">
+
+        </ul>
+
+        <div class="nothingfound" style="display: none;">
+            <div class="nofiles"></div>
+            <span>No files here.</span>
+        </div>
+
     </div>
-
-    <div class="breadcrumbs"><span class="folderName"></span></div>
-
-    <ul class="data animated" style="">
-
-    </ul>
-
-    <div class="nothingfound" style="display: none;">
-        <div class="nofiles"></div>
-        <span>No files here.</span>
-    </div>
-
-</div>
 
 <script type="text/javascript"
-        src="{{ url_for('static', filename='js/socketio.js') }}"></script>
+        src="{{ url_for('static', filename='js/shared.js') }}"></script>
 <script type="text/javascript"
         src="{{ url_for('static', filename='js/finder.js') }}"></script>
 
