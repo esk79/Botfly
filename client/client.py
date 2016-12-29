@@ -139,7 +139,7 @@ class ByteLockBundler:
 
             specs = {}
             for specialname in self.specialbytes.keys():
-                if len(self.specialbytes[specialname]) <= bytesize:
+                if len(specs)==0 or len(self.specialbytes[specialname]) <= bytesize:
                     specs[specialname] = self.specialbytes[specialname]
                     bytesize -= len(specs[specialname])
             for specialname in specs.keys():
