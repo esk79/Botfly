@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+    <title>Botfly</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <script type="text/javascript"
+            src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+
+
+    <!-- Bootstrap Core CSS -->
+    <link href="../static/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/custom.css') }}">
+    <!-- Include finder stylesheet -->
+    <link href="../static/css/finder.css" rel="stylesheet"/>
+
+    {% include 'nav.html' %}
+</head>
+<body data-gr-c-s-loaded="true">
+
+<div class="filemanager">
+
+    <div class="breadcrumbs"><span class="folderName"></span></div>
+
+    <ul class="data animated" style="">
+
+    </ul>
+
+    <div class="nothingfound" style="display: none;">
+        <div class="nofiles"></div>
+        <span>No files here.</span>
+    </div>
+
+</div>
+
+<script type="text/javascript"
+        src="{{ url_for('static', filename='js/socketio.js') }}"></script>
+<script type="text/javascript"
+        src="{{ url_for('static', filename='js/finder.js') }}"></script>
+
+
+</body>
+</html>

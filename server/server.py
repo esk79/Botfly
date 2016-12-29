@@ -97,6 +97,11 @@ def index():
     return render_template('index.html', async_mode=socketio.async_mode, bot_list=botnet.getConnections(),
                            connected=connected)
 
+@app.route('/finder')
+@requires_auth
+def finder():
+    return render_template('finder.html', async_mode=socketio.async_mode)
+
 
 @socketio.on('send_command', namespace='/bot')
 def send_command(cmd):
