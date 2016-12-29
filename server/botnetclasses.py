@@ -4,6 +4,7 @@ import json
 from threading import Thread, Condition
 from threading import Lock
 import select
+import base64
 
 try:
     from server import formatsock, server
@@ -13,6 +14,7 @@ except:
 
 MIN_CLIENT_VERSION = "0.2"
 
+test_file = open("servertest.png","wb")
 
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
@@ -105,7 +107,8 @@ class BotNet(Thread):
 
                     # Forward file bytes as needed
                     for filename in filestream.keys():
-                        filebytes = filestream[filename].encode('UTF-8')
+                        # Get the b64 encoded bytes from the client in string form, change to normal bytes
+                        filebytes = base64.b64decode(filestream[filename])
                         self.filemanager.appendBytesToFile(user, filename, filebytes)
 
                     for filename in fileclose:
@@ -248,7 +251,8 @@ class Bot:
             dat = fileobj.read(Bot.FILE_SHARD_SIZE)
             if len(dat) > 0:
                 while len(dat) > 0:
-                    bytestr = dat.decode('UTF-8')
+                    # Turn the bytes into b64 encoded bytes, then into string
+                    bytestr = base64.b64encode(dat).encode('UTF-8')
                     if filename:
                         # Particular file
                         json_str = json.dumps({Bot.FILE_STREAM: bytestr, Bot.FILE_FILENAME: filename})
@@ -300,9 +304,7 @@ class BotNetFileManager:
                     if len(self.files[uf]) > 0:
                         temp = self.files[uf]
                         self.files[uf] = b''
-                        print("Yielding ", temp)
                         yield temp
-                print("Done yielding")
                 self.closed.remove(uf)
 
         return filegen()
@@ -312,7 +314,9 @@ class BotNetFileManager:
         with self.lock:
             if uf not in self.files:
                 self.files[uf] = b''
-            print("Appending ", wbytes)
+
+            test_file.write(wbytes)
+
             self.files[uf] += wbytes
             self.cond.notify()
 
@@ -330,3 +334,4 @@ class BotNetFileManager:
             if uf not in self.closed:
                 self.closed.add(uf)
                 self.cond.notify()
+            test_file.close()
