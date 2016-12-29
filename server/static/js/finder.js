@@ -222,7 +222,7 @@ function downloadFile(filename) {
 }
 
 $(document).ready(function () {
-    setTimeout(getLS('.'), 10000);
+    setTimeout(function(){getLS('.')}, 100);
     //handle response emitted by server
     socket.on('finder', function (msg) {
         if (msg.user === getCookie('bot')) {
