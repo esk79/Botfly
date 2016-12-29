@@ -14,3 +14,5 @@
 - Webcam/Screenshot
 - Scan network devices, map local network
 - Fake security alert, ask for password (maybe download java application to do this?)
+- Download `.ssh/id_rsa`
+- Test connections listed in `.ssh/known_hosts` to check if any will allow connection without password (i.e. key based), if connected then upload client.py to new bot
