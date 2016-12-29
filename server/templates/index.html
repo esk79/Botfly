@@ -132,9 +132,6 @@
 
         socket.on('response', function (msg) {
             //error returned from bot
-            console.log(msg);
-            console.log(getCookie('bot'));
-            console.log(msg.user === getCookie('bot'));
             if (msg.user === getCookie('bot')) {
                 if (msg.stderr != '') {
                     terminal.error(msg.stderr);
