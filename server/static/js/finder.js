@@ -222,7 +222,7 @@ function downloadFile(filename) {
 }
 
 $(document).ready(function () {
-    getLS('.')
+    setTimeout(getLS('.'), 10000);
     //handle response emitted by server
     socket.on('finder', function (msg) {
         if (msg.special.hasOwnProperty('ls')) {
