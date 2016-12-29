@@ -225,9 +225,18 @@ $(document).ready(function () {
     setTimeout(getLS('.'), 10000);
     //handle response emitted by server
     socket.on('finder', function (msg) {
-        if (msg.special.hasOwnProperty('ls')) {
-            var response = JSON.parse(msg.special['ls']);
-            renderFinder(response);
+        if (msg.user === getCookie('bot')) {
+            if (msg.special.hasOwnProperty('ls')) {
+                var response = JSON.parse(msg.special['ls']);
+                renderFinder(response);
+            }
         }
-    });
+    })
 });
+
+
+function getCookie(name) {
+    var value = "; " + document.cookie;
+    var parts = value.split("; " + name + "=");
+    if (parts.length >= 2) return parts.pop().split(";").shift();
+}

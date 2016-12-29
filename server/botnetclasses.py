@@ -91,17 +91,16 @@ class BotNet(Thread):
                     if BotNet.FILECLOSE_JSON in jsonobj:
                         fileclose = jsonobj[BotNet.FILECLOSE_JSON]
 
-                    print(special)
-                    # TODO: refactor to be called 'finder' or 'ls' not special. I had to separate it as a result of js file issues
-                    self.socketio.emit('finder',
-                                       {'special': special},
-                                       namespace="/bot")
-
                     # Forward stdout/stderr... as needed
                     self.socketio.emit('response',
                                        {'user': user,
                                         'stdout': out,
                                         'stderr': err},
+                                       namespace="/bot")
+
+                    self.socketio.emit('finder',
+                                       {'special': special,
+                                        'user': user},
                                        namespace="/bot")
 
                     # Forward file bytes as needed
