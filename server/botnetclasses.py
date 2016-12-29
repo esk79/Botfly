@@ -101,8 +101,7 @@ class BotNet(Thread):
                     self.socketio.emit('response',
                                        {'user': user,
                                         'stdout': out,
-                                        'stderr': err,
-                                        'special': special},
+                                        'stderr': err},
                                        namespace="/bot")
 
                     # Forward file bytes as needed
