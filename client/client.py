@@ -9,6 +9,7 @@ import time
 import json
 import threading
 import struct
+import base64
 try:from StringIO import StringIO
 except:from io import StringIO
 
@@ -115,6 +116,9 @@ class ByteLockBundler:
 
     def writeFileup(self, filename, wbytes):
         with self.lock:
+            print(wbytes)
+            wbytes = base64.b64encode(wbytes)
+            print(wbytes)
             if filename not in self.filebytes:
                 self.filebytes[filename] = wbytes
             else:
@@ -179,6 +183,7 @@ class ByteLockBundler:
             out = out.decode('UTF-8')
             err = err.decode('UTF-8')
             for filename in filestream.keys():
+                # Take bytes, encode using base64, decode into string for json
                 filestream[filename] = filestream[filename].decode('UTF-8')
 
             return out,err, filestream, fileclose, specs
@@ -283,7 +288,8 @@ def serve(sock):
                     fileobjs[filename] = open(filename,'wb')
                 fobj = fileobjs[filename]
                 bstr = recvjson[FILE_STREAM]
-                fobj.write(bstr.encode('UTF-8'))
+                b64bytes = base64.b64decode(bstr)
+                fobj.write(b64bytes)
             if FILE_CLOSE in recvjson:
                 filename = recvjson[FILE_CLOSE]
                 if filename in fileobjs:
