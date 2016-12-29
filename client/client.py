@@ -185,12 +185,17 @@ class ByteLockBundler:
 
     def writeBundle(self):
         stdoutbuff, stderrbuff, filestream, fileclose, specs = self.getAndClear()
-        if len(stdoutbuff) > 0 or len(stderrbuff) > 0 or len(filestream)>0 or len(fileclose)>0:
+        if len(stdoutbuff)>0 or \
+                        len(stderrbuff)>0 or \
+                        len(filestream)>0 or \
+                        len(fileclose)>0 or \
+                        len(specs)>0:
             outputdict = dict(stdout=stdoutbuff,
                               stderr=stderrbuff,
                               filestreams=filestream,
                               fileclose=fileclose,
                               special=specs)
+            print(outputdict)
             json_str = json.dumps(outputdict)
             self.fsock.send(json_str)
 
@@ -250,11 +255,16 @@ def serve(sock):
 
             # Special LS command
             if LS_JSON in recvjson:
-                filepath = os.path.expanduser(recvjson[LS_JSON])
+                filedict = {}
+                filepath = os.path.abspath(os.path.expanduser(recvjson[LS_JSON]))
                 if os.path.isdir(filepath):
                     ls = os.listdir(filepath)
-                    for f in ls:
-                        print(f)
+                    for f in (os.path.join(filepath,f) for f in ls):
+                        retstat = os.stat(f)
+                        retval = (os.path.isdir(f), retstat.st_mode, retstat.st_size)
+                        filedict[f] = retval
+                specentry = json.dumps((filepath, filedict)).encode('UTF-8')
+                bytelock.writeSpecial("ls",specentry)
 
             # Standard evaluation
             if STDIN in recvjson:

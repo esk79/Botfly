@@ -161,7 +161,8 @@
             if (msg.stderr != '') {
                 terminal.error(msg.stderr);
 
-            } else if (msg.stdout != "Server generated event") {
+            }
+            if (msg.stdout != "Server generated event") {
                 terminal.echo(textStyle(msg.stdout));
             }
         });

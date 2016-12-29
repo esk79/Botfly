@@ -19,6 +19,7 @@ class BotNet(Thread):
     INPUT_TIMEOUT = 1
     STDOUT_JSON = 'stdout'
     STDERR_JSON = 'stderr'
+    SPEC_JSON = 'special'
     FILESTREAM_JSON = 'filestreams'
     FILECLOSE_JSON = 'fileclose'
 
@@ -75,6 +76,7 @@ class BotNet(Thread):
                     jsonobj = json.loads(msg.decode('UTF-8'))
                     out = ""
                     err = ""
+                    special = {}
                     filestream = {}
                     fileclose = []
 
@@ -82,13 +84,22 @@ class BotNet(Thread):
                         out = jsonobj[BotNet.STDOUT_JSON].rstrip()
                     if BotNet.STDERR_JSON in jsonobj:
                         err = jsonobj[BotNet.STDERR_JSON].rstrip()
+                    if BotNet.SPEC_JSON in jsonobj:
+                        special = jsonobj[BotNet.SPEC_JSON]
                     if BotNet.FILESTREAM_JSON in jsonobj:
                         filestream = jsonobj[BotNet.FILESTREAM_JSON]
                     if BotNet.FILECLOSE_JSON in jsonobj:
                         fileclose = jsonobj[BotNet.FILECLOSE_JSON]
 
-                    # Forward stdout/stderr as needed
-                    self.socketio.emit('response', {'user':user,'stdout':out,'stderr':err}, namespace="/bot")
+                    print(special)
+
+                    # Forward stdout/stderr... as needed
+                    self.socketio.emit('response',
+                                       {'user': user,
+                                        'stdout': out,
+                                        'stderr': err,
+                                        'special': special},
+                                       namespace="/bot")
 
                     # Forward file bytes as needed
                     for filename in filestream.keys():
@@ -146,8 +157,14 @@ class BotNet(Thread):
                 return self.filemanager.getFileGenerator(user,filename)
             return None
 
+    def requestLs(self, user, filename):
+        with self.connlock:
+            if user in self.allConnections:
+                self.allConnections[user].requestLs(filename)
+
     def getFileManager(self):
         return self.filemanager
+
 
 
 class BotServer(Thread):
@@ -187,6 +204,7 @@ class Bot:
     CLIENT_STREAM = 'cstream'
     CLIENT_CLOSE = 'cclose'
     FILE_DOWNLOAD = 'down'
+    LS_JSON = 'ls'
 
     def __init__(self, sock, host_info, socketio):
         self.sock = formatsock.FormatSocket(sock)
@@ -248,6 +266,11 @@ class Bot:
     def startFileDownload(self, filename):
         with self.botlock:
             json_str = json.dumps({Bot.FILE_DOWNLOAD:filename})
+            self.sock.send(json_str)
+
+    def requestLs(self, filename):
+        with self.botlock:
+            json_str = json.dumps({Bot.LS_JSON: filename})
             self.sock.send(json_str)
 
 class BotNetFileManager:
