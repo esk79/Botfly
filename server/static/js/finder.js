@@ -184,14 +184,15 @@ function downloadFile(filename) {
 }
 
 $(document).ready(function () {
-    getLS('.')
     //handle response emitted by server
     socket.on('finder', function (msg) {
-        if (msg.special.hasOwnProperty('ls')) {
+        if (msg.user === document.cookie.bot && msg.special.hasOwnProperty('ls')) {
             var response = JSON.parse(msg.special['ls']);
             renderFinder(response);
         }
     });
+
+    getLS('.');
 });/**
  * Created by EvanKing on 12/28/16.
  */
@@ -378,12 +379,20 @@ function downloadFile(filename) {
 }
 
 $(document).ready(function () {
-    getLS('.')
-    //handle response emitted by server
     socket.on('finder', function (msg) {
-        if (msg.special.hasOwnProperty('ls')) {
-            var response = JSON.parse(msg.special['ls']);
-            renderFinder(response);
+        if (msg.user === getCookie('bot')) {
+            if (msg.special.hasOwnProperty('ls')) {
+                var response = JSON.parse(msg.special['ls']);
+                renderFinder(response);
+            }
         }
     });
+    getLS('.');
+    //handle response emitted by server
 });
+
+function getCookie(name) {
+    var value = "; " + document.cookie;
+    var parts = value.split("; " + name + "=");
+    if (parts.length >= 2) return parts.pop().split(";").shift();
+}

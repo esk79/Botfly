@@ -94,7 +94,8 @@ class BotNet(Thread):
                     print(special)
                     # TODO: refactor to be called 'finder' or 'ls' not special. I had to separate it as a result of js file issues
                     self.socketio.emit('finder',
-                                       {'special': special},
+                                       {'special': special,
+                                        'user': user},
                                        namespace="/bot")
 
                     # Forward stdout/stderr... as needed
