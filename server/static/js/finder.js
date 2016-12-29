@@ -222,16 +222,26 @@ function downloadFile(filename) {
 }
 
 $(document).ready(function () {
-    setTimeout(function(){getLS('.')}, 100);
     //handle response emitted by server
+    var not_received = true;
     socket.on('finder', function (msg) {
         if (msg.user === getCookie('bot')) {
+            not_received = false;
             if (msg.special.hasOwnProperty('ls')) {
                 var response = JSON.parse(msg.special['ls']);
                 renderFinder(response);
             }
         }
-    })
+    });
+
+    var receive_loop = function(){
+        if (not_received) {
+            getLS('.');
+            setTimeout(receive_loop,500);
+        }
+    };
+    setTimeout(receive_loop, 100);
+
 });
 
 
