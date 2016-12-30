@@ -12,7 +12,7 @@ $(function () {
         var value = $(this).val();
         $.ajax({
             type: "POST",
-            url: "#",
+            url: "/choose",
             data: {
                 bot: value
             },

