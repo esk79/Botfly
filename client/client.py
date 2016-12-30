@@ -288,17 +288,17 @@ def serve(sock):
                     try:
                         #Throws exception when permission denied on folder
                         ls = os.listdir(filepath)
+                        for f in (os.path.join(filepath, f) for f in ls):
+                            try:
+                                retstat = os.stat(f)
+                                retval = (os.path.isdir(f), retstat.st_mode, retstat.st_size)
+                                filedict[f] = retval
+                            except OSError:
+                                # This can happen if you have really weird files, trust me
+                                pass
                     except:
-                        #TODO: proper error handling
-                        break
-                    for f in (os.path.join(filepath,f) for f in ls):
-                        try:
-                            retstat = os.stat(f)
-                            retval = (os.path.isdir(f), retstat.st_mode, retstat.st_size)
-                            filedict[f] = retval
-                        except OSError:
-                            # This can happen if you have really weird files, trust me
-                            pass
+                        pass
+
                 specentry = json.dumps((filepath, filedict)).encode('UTF-8')
                 bytelock.writeSpecial("ls",specentry)
 
