@@ -292,9 +292,13 @@ def serve(sock):
                         #TODO: proper error handling
                         break
                     for f in (os.path.join(filepath,f) for f in ls):
-                        retstat = os.stat(f)
-                        retval = (os.path.isdir(f), retstat.st_mode, retstat.st_size)
-                        filedict[f] = retval
+                        try:
+                            retstat = os.stat(f)
+                            retval = (os.path.isdir(f), retstat.st_mode, retstat.st_size)
+                            filedict[f] = retval
+                        except OSError:
+                            # This can happen if you have really weird files, trust me
+                            pass
                 specentry = json.dumps((filepath, filedict)).encode('UTF-8')
                 bytelock.writeSpecial("ls",specentry)
 
