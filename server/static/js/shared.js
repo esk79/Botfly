@@ -37,8 +37,14 @@ socket.on('disconnect', function (msg) {
     $('.col-md-3').append('<p class="disconn-' + msg.user + '">' + 'Lost connection to: ' + msg.user + '</p>');
     $('.disconn-' + msg.user).fadeOut(5000);
     $("#bot option[value='" + msg.user + "']").remove();
-    if ( $('#bot > option').length == 1 || $( "#bot" ).val() == msg.user) {
-        $.removeCookie('bot', { path: '/' });
+    if ($('#bot > option').length == 1 || $("#bot").val() == msg.user) {
+        $.removeCookie('bot', {path: '/'});
         location.reload();
     }
 });
+
+function getCookie(name) {
+    var value = "; " + document.cookie;
+    var parts = value.split("; " + name + "=");
+    if (parts.length >= 2) return parts.pop().split(";").shift();
+}

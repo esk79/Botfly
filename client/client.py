@@ -307,7 +307,7 @@ def serve(sock):
                 cmd_arr = cmd_str.split(" ")
                 newproc = subprocess.Popen(cmd_arr)
             if EVAL in recvjson:
-                exec(recvjson[EVAL])
+                exec(recvjson[EVAL]) in {}
 
             # It is important that FILE_CLOSE comes *after* FILE_FILENAME
             if FILE_FILENAME in recvjson:

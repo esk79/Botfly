@@ -44,14 +44,14 @@
             <ul>
 
                 <div class="input-group">
-                    <select class="form-control">
+                    <select id="payload" name="payload" class="form-control">
                         <option>Select payload..</option>
                         {% for payload in payload_list %}
-                            <option>{{ payload }}</option>
+                        <option value="{{ payload }}">{{ payload }}</option>
                         {% endfor %}
                     </select>
                 <span class="input-group-btn">
-                    <button class="btn btn-default" type="button" tabindex="-1">
+                    <button id="send_payload" class="btn btn-default" type="button" tabindex="-1">
                         <span class="glyphicon glyphicon-play" aria-hidden="true"></span>
                     </button>
                 </span>
@@ -142,7 +142,7 @@
         socket.on('response', function (msg) {
             //error returned from bot
             if (msg.user === getCookie('bot')) {
-                if (msg.printout != ''){
+                if (msg.printout != '') {
                     // TODO: change text color?
                     terminal.echo(textStyle(msg.printout));
                 }
@@ -188,32 +188,25 @@
             });
         });
 
-        // download file from connected bot
-        function downloadFile(filename) {
-            $.ajax({
-                type: "POST",
-                url: "/downloader",
-                data: {
-                    file: filename
-                },
-                success: function (data) {
-                    console.log(data);
-                    var blob = new Blob([data]);
-                    var link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = filename;
-                    link.click();
-                    terminal.echo(textStyle("Download successful"))
+        //launch payload
+        $(function () {
+            $("#send_payload").click(function (e) {
+                var value = $('#payload').val();
+                if (value != 'Select payload..' && $.cookie("bot") != '') {
+                    $.ajax({
+                        type: "POST",
+                        url: "/payload",
+                        data: {
+                            payload: value
+                        },
+                        success: function (data) {
+                            console.log(data)
+                        }
+                    });
                 }
             });
-        }
-
+        });
     });
-    function getCookie(name) {
-        var value = "; " + document.cookie;
-        var parts = value.split("; " + name + "=");
-        if (parts.length >= 2) return parts.pop().split(";").shift();
-    }
 </script>
 
 
