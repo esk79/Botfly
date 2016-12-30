@@ -46,8 +46,9 @@
                 <div class="input-group">
                     <select class="form-control">
                         <option>Select payload..</option>
-                        <option>Payload 1</option>
-                        <option>Payload 2</option>
+                        {% for payload in payload_list %}
+                            <option>{{ payload }}</option>
+                        {% endfor %}
                     </select>
                 <span class="input-group-btn">
                     <button class="btn btn-default" type="button" tabindex="-1">
@@ -141,6 +142,10 @@
         socket.on('response', function (msg) {
             //error returned from bot
             if (msg.user === getCookie('bot')) {
+                if (msg.printout != ''){
+                    // TODO: change text color?
+                    terminal.echo(textStyle(msg.printout));
+                }
                 if (msg.stderr != '') {
                     terminal.error(msg.stderr);
                 }

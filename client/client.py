@@ -10,8 +10,10 @@ import json
 import threading
 import struct
 import base64
-try:from StringIO import StringIO
-except:from io import StringIO
+try:
+    from StringIO import StringIO
+except:
+    from io import StringIO
 
 __version__ = "0.2"
 
@@ -32,6 +34,8 @@ FILE_CLOSE = 'fclose'
 FILE_FILENAME = 'fname'
 CLIENT_STREAM = 'cstream'
 CLIENT_CLOSE = 'cclose'
+
+PRINT_BUFFER = StringIO()
 
 RUNNING = True
 
@@ -100,6 +104,7 @@ class ByteLockBundler:
     def __init__(self, fsock):
         self.stdoutbytes = b''
         self.stderrbytes = b''
+        self.printstr = ''
         self.specialbytes = {}
         self.filebytes = {}
         self.fileclose = []
@@ -113,6 +118,15 @@ class ByteLockBundler:
     def writeStderr(self, wbytes):
         with self.lock:
             self.stderrbytes += wbytes
+
+    def write(self, wstr):
+        '''
+        This call allows bytelock to act as the stdout for the
+        whole python program, redirecting output to the network
+        :param wbytes:
+        '''
+        with self.lock:
+            self.printstr += wstr
 
     def writeFileup(self, filename, wbytes):
         with self.lock:
@@ -146,6 +160,13 @@ class ByteLockBundler:
                     bytesize -= len(specs[specialname])
             for specialname in specs.keys():
                 self.specialbytes.pop(specialname)
+
+            printout = self.printstr
+            self.printstr = ''
+            if len(printout) > bytesize:
+                self.printstr= printout[bytesize:]
+                printout = printout[:bytesize]
+            bytesize -= len(printout)
 
             out = self.stdoutbytes
             self.stdoutbytes = b''
@@ -184,16 +205,18 @@ class ByteLockBundler:
                 # Take bytes, encode using base64, decode into string for json
                 filestream[filename] = filestream[filename].decode('UTF-8')
 
-            return out,err, filestream, fileclose, specs
+            return printout,out,err,filestream, fileclose, specs
 
     def writeBundle(self):
-        stdoutbuff, stderrbuff, filestream, fileclose, specs = self.getAndClear()
-        if len(stdoutbuff)>0 or \
+        printoutbuff, stdoutbuff, stderrbuff, filestream, fileclose, specs = self.getAndClear()
+        if len(printoutbuff)>0 or \
+                        len(stdoutbuff)>0 or \
                         len(stderrbuff)>0 or \
                         len(filestream)>0 or \
                         len(fileclose)>0 or \
                         len(specs)>0:
-            outputdict = dict(stdout=stdoutbuff,
+            outputdict = dict(printout=printoutbuff,
+                              stdout=stdoutbuff,
                               stderr=stderrbuff,
                               filestreams=filestream,
                               fileclose=fileclose,
@@ -225,6 +248,8 @@ def main():
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
+    sys.stdout = bytelock
+
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
@@ -282,7 +307,7 @@ def serve(sock):
                 cmd_arr = cmd_str.split(" ")
                 newproc = subprocess.Popen(cmd_arr)
             if EVAL in recvjson:
-                eval(recvjson[EVAL])
+                exec(recvjson[EVAL])
 
             # It is important that FILE_CLOSE comes *after* FILE_FILENAME
             if FILE_FILENAME in recvjson:
