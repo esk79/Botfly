@@ -19,7 +19,6 @@ except:
 HOST = 'localhost'
 PORT = 1708
 UPLOAD_FOLDER = 'static/uploads/'  # TODO
-CLIENT_FILE = '../client/client.py' # TODO
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -146,7 +145,7 @@ if __name__ == "__main__":
     TCPSOCK.bind((HOST, PORT))
 
     botnet = BotNet(socketio)
-    botserver = BotServer(TCPSOCK, botnet, socketio, CLIENT_FILE)
+    botserver = BotServer(TCPSOCK, botnet, socketio)
 
     botnet.start()
     botserver.start()

