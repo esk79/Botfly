@@ -233,8 +233,9 @@ function downloadFile(filename) {
 
 $(document).ready(function () {
     if ($.cookie("bot") == '' || $.cookie("bot") == null) {
-        console.log("select a bot");
+        filemanager.prepend('<div class="container no-bot"><h2>No bot selected.</h2></div>')
     } else {
+        $('.no-bot').remove()
         //handle response emitted by server
         var not_received = true;
         socket.on('finder', function (msg) {
