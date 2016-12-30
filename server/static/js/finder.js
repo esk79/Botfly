@@ -202,6 +202,16 @@ function getLS(path) {
     });
 }
 
+function _base64ToArrayBuffer(base64) {
+    var binary_string =  window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array( len );
+    for (var i = 0; i < len; i++)        {
+        bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
 // download file from connected bot
 function downloadFile(filename) {
     $.ajax({
@@ -211,11 +221,11 @@ function downloadFile(filename) {
             file: filename
         },
         success: function (data) {
-            var blob = new Blob([data]);
+            var blob = new Blob([_base64ToArrayBuffer(data)]);
             var link = document.createElement('a');
             link.href = window.URL.createObjectURL(blob);
-            var pathParts = filename.split("/")
-            link.download = pathParts[pathParts.length - 1]
+            var pathParts = filename.split("/");
+            link.download = pathParts[pathParts.length - 1];
             link.click();
         }
     });

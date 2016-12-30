@@ -4,8 +4,6 @@ from flask import Flask, render_template, session, request, Response, stream_wit
 from flask import make_response
 from flask_socketio import SocketIO, emit
 from functools import wraps
-import importlib
-from werkzeug import secure_filename
 
 # Loading library depends on how we want to setup the project later,
 # for now this will do

