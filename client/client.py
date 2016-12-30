@@ -116,9 +116,7 @@ class ByteLockBundler:
 
     def writeFileup(self, filename, wbytes):
         with self.lock:
-            print(wbytes)
             wbytes = base64.b64encode(wbytes)
-            print(wbytes)
             if filename not in self.filebytes:
                 self.filebytes[filename] = wbytes
             else:
