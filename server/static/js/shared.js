@@ -37,4 +37,8 @@ socket.on('disconnect', function (msg) {
     $('.col-md-3').append('<p class="disconn-' + msg.user + '">' + 'Lost connection to: ' + msg.user + '</p>');
     $('.disconn-' + msg.user).fadeOut(5000);
     $("#bot option[value='" + msg.user + "']").remove();
+    if ( $('#bot > option').length == 1) {
+        $.removeCookie('bot', { path: '/' });
+        location.reload();
+    }
 });
