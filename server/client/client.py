@@ -10,6 +10,7 @@ import json
 import threading
 import struct
 import base64
+import traceback
 try:
     from StringIO import StringIO
 except:
@@ -328,7 +329,11 @@ def serve(sock):
                 cmd_arr = cmd_str.split(" ")
                 newproc = subprocess.Popen(cmd_arr)
             if EVAL in recvjson:
-                exec(recvjson[EVAL]) in {}
+                try:
+                    exec(recvjson[EVAL]) in {}
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    print(tb,file=sys.stderr)
 
             # It is important that FILE_CLOSE comes *after* FILE_FILENAME
             if FILE_FILENAME in recvjson:
