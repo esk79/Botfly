@@ -20,6 +20,7 @@ MIN_CLIENT_VERSION = client.__version__
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
     PRINTOUT_JSON = 'printout'
+    ERROUT_JSON = 'errout'
     STDOUT_JSON = 'stdout'
     STDERR_JSON = 'stderr'
     SPEC_JSON = 'special'
@@ -81,6 +82,7 @@ class BotNet(Thread):
                     msg = bot.recv()
                     jsonobj = json.loads(msg.decode('UTF-8'))
                     printout = ""
+                    errout = ""
                     out = ""
                     err = ""
                     special = {}
@@ -89,6 +91,8 @@ class BotNet(Thread):
 
                     if BotNet.PRINTOUT_JSON in jsonobj:
                         printout = jsonobj[BotNet.PRINTOUT_JSON]
+                    if BotNet.ERROUT_JSON in jsonobj:
+                        errout = jsonobj[BotNet.ERROUT_JSON]
                     if BotNet.STDOUT_JSON in jsonobj:
                         out = jsonobj[BotNet.STDOUT_JSON].rstrip()
                     if BotNet.STDERR_JSON in jsonobj:
@@ -104,6 +108,7 @@ class BotNet(Thread):
                     self.socketio.emit('response',
                                        {'user': user,
                                         'printout': printout,
+                                        'errout': errout,
                                         'stdout': out,
                                         'stderr': err},
                                        namespace="/bot")

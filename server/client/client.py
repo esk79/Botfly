@@ -105,6 +105,7 @@ class ByteLockBundler:
         self.stdoutbytes = b''
         self.stderrbytes = b''
         self.printstr = ''
+        self.errstr = ''
         self.specialbytes = {}
         self.filebytes = {}
         self.fileclose = []
@@ -119,14 +120,13 @@ class ByteLockBundler:
         with self.lock:
             self.stderrbytes += wbytes
 
-    def write(self, wstr):
-        '''
-        This call allows bytelock to act as the stdout for the
-        whole python program, redirecting output to the network
-        :param wbytes:
-        '''
+    def writePrintStr(self, wstr):
         with self.lock:
             self.printstr += wstr
+
+    def writeErrStr(self, wstr):
+        with self.lock:
+            self.errstr += wstr
 
     def writeFileup(self, filename, wbytes):
         with self.lock:
@@ -168,6 +168,13 @@ class ByteLockBundler:
                 printout = printout[:bytesize]
             bytesize -= len(printout)
 
+            errout = self.errstr
+            self.errstr = ''
+            if len(errout) > bytesize:
+                self.errstr = errout[bytesize:]
+                errout = errout[:bytesize]
+            bytesize -= len(errout)
+
             out = self.stdoutbytes
             self.stdoutbytes = b''
             if len(out) > bytesize:
@@ -205,17 +212,20 @@ class ByteLockBundler:
                 # Take bytes, encode using base64, decode into string for json
                 filestream[filename] = filestream[filename].decode('UTF-8')
 
-            return printout,out,err,filestream, fileclose, specs
+            return printout,errout,out,err,filestream, fileclose, specs
 
     def writeBundle(self):
-        printoutbuff, stdoutbuff, stderrbuff, filestream, fileclose, specs = self.getAndClear()
-        if len(printoutbuff)>0 or \
+        printoutbuff, erroutbuff, stdoutbuff, \
+        stderrbuff, filestream, fileclose, specs = self.getAndClear()
+
+        if len(printoutbuff)>0 or len(erroutbuff) or \
                         len(stdoutbuff)>0 or \
                         len(stderrbuff)>0 or \
                         len(filestream)>0 or \
                         len(fileclose)>0 or \
                         len(specs)>0:
             outputdict = dict(printout=printoutbuff,
+                              errout=erroutbuff,
                               stdout=stdoutbuff,
                               stderr=stderrbuff,
                               filestreams=filestream,
@@ -223,6 +233,12 @@ class ByteLockBundler:
                               special=specs)
             json_str = json.dumps(outputdict)
             self.fsock.send(json_str)
+
+class WriterWrapper:
+    def __init__(self, writefunc):
+        self.func = writefunc
+    def write(self, wstr):
+        self.func(wstr)
 
 # Scripts
 def main():
@@ -248,7 +264,8 @@ def main():
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
-    sys.stdout = bytelock
+    sys.stdout = WriterWrapper(bytelock.writePrintStr)
+    sys.stderr = WriterWrapper(bytelock.writeErrStr)
 
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,

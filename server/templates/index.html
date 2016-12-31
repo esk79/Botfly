@@ -142,9 +142,14 @@
         socket.on('response', function (msg) {
             //error returned from bot
             if (msg.user === getCookie('bot')) {
+                console.log(msg);
                 if (msg.printout != '') {
                     // TODO: change text color?
                     terminal.echo(textStyle(msg.printout));
+                }
+                if (msg.errout != '') {
+                    // TODO: change text color?
+                    terminal.error(msg.errout);
                 }
                 if (msg.stderr != '') {
                     terminal.error(msg.stderr);
