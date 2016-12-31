@@ -1,5 +1,7 @@
 import subprocess
 
+import sys
+
 '''Generates native osx popup asking for user password.'''
 
 
@@ -19,6 +21,6 @@ proc = subprocess.Popen(['osascript', '-'],
                         stderr=subprocess.PIPE)
 
 out, err = proc.communicate(applescript)
-print "Error: {}".format(err) if err else "Password: {}".format(out)
+print "Error: {}".format(err[:-1]) if err else "Password: {}".format(out[:-1])
 
 
