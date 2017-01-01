@@ -21,4 +21,4 @@ proc = subprocess.Popen(['imagesnap', '/tmp/image-{}.png'.format(datetime.dateti
                         stderr=subprocess.PIPE)
 (out, err) = proc.communicate()
 
-print err if err else out
+print(err if err else out)

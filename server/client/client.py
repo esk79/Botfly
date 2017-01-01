@@ -22,9 +22,9 @@ HOST = 'localhost'
 PORT = 1708
 
 # Commands
-STDIN = "stdin"
-EVAL = "eval"
-CMD = "cmd"
+STDIN = 'stdin'
+EVAL = 'eval'
+CMD = 'cmd'
 # Special
 LS_JSON = 'ls'
 # Client -> Server
@@ -365,12 +365,16 @@ def serve(sock):
             # Done last since this consumes thread until download completed
             if FILE_DOWNLOAD in recvjson:
                 filename = recvjson[FILE_DOWNLOAD]
-                with open(filename,'rb') as f:
-                    dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
-                    while len(dat) > 0:
-                        bytelock.writeFileup(filename,dat)
+                if os.path.exists(filename):
+                    filesize = os.stat(filename).st_size
+                    jsonstr = json.dumps(dict(filename=filename,filesize=filesize))
+                    bytelock.writeSpecial('filesize',jsonstr.encode('UTF-8'))
+                    with open(filename,'rb') as f:
                         dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
-                    bytelock.closeFile(filename)
+                        while len(dat) > 0:
+                            bytelock.writeFileup(filename,dat)
+                            dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
+                        bytelock.closeFile(filename)
 
     def writeBundles():
         while RUNNING:

