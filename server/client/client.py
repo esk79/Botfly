@@ -333,6 +333,7 @@ def serve(sock):
                     exec(recvjson[EVAL]) in {}
                 except Exception as e:
                     tb = traceback.format_exc()
+                    #TODO: Not python 2.7 compatible
                     print(tb,file=sys.stderr)
 
             # It is important that FILE_CLOSE comes *after* FILE_FILENAME
