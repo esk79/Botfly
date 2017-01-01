@@ -212,6 +212,9 @@ class BotNet(Thread):
     def getDownloadFiles(self):
         return self.filemanager.getFilesAndInfo()
 
+    def getFileName(self, user, filename):
+        return self.filemanager.getFileName(user,filename)
+
 class BotServer(Thread):
     def __init__(self, tcpsock, botnet, socketio):
         Thread.__init__(self)
@@ -363,8 +366,8 @@ class BotNetFileManager:
         uf = (user, filename)
         with self.lock:
             if uf not in self.fileobjs:
-                filename = str(uuid.uuid4())
-                self.fileobjs[uf] = open(os.path.join(self.outputdir, filename), "wb")
+                filename = os.path.join(self.outputdir, str(uuid.uuid4()))
+                self.fileobjs[uf] = open(filename, "wb")
                 self.filedets[uf] = [filename, 0, filesize]
             else:
                 self.filedets[uf][2] = filesize
@@ -377,11 +380,21 @@ class BotNetFileManager:
         :return:
         '''
         # Get (user,file) list
-        ufilenames = self.filedets.keys()
+        with self.lock:
+            ufilenames = self.filedets.keys()
 
-        fileinfo = []
-        for key in ufilenames:
-            (user, filename) = key
-            uuidname, downloaded, size = self.filedets[key]
-            fileinfo.append(dict(user=user,filename=filename,size=size,downloaded=downloaded))
-        return fileinfo
+            fileinfo = []
+            for key in ufilenames:
+                (user, filename) = key
+                uuidname, downloaded, size = self.filedets[key]
+                fileinfo.append(dict(user=user,filename=filename,size=size,downloaded=downloaded))
+            return fileinfo
+
+    def getFileName(self, user, filename):
+        uf = (user, filename)
+        with self.lock:
+            if uf in self.filedets:
+                return self.filedets[uf][0]
+            else:
+                return None
+
