@@ -31,6 +31,34 @@
     -moz-animation-fill-mode: forwards;
 }
 
+.arrow-up {
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid #4e5d6c;
+    display: none;
+
+    animation-name: slidenavAnimation;
+    animation-duration: .4s;
+    animation-iteration-count: 1;
+    animation-timing-function: ease;
+    animation-fill-mode: forwards;
+
+    -webkit-animation-name: slidenavAnimation;
+    -webkit-animation-duration: .4s;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-timing-function: ease;
+    -webkit-animation-fill-mode: forwards;
+
+    -moz-animation-name: slidenavAnimation;
+    -moz-animation-duration: .4s;
+    -moz-animation-iteration-count: 1;
+    -moz-animation-timing-function: ease;
+    -moz-animation-fill-mode: forwards;
+}
+
+
 @keyframes slidenavAnimation {
     from {
         opacity: 0;
@@ -48,6 +76,7 @@
         opacity: 1;
     }
 }
+
 
 .dropdown-menu {
     min-width: 350px;
@@ -68,12 +97,4 @@
     margin-top: 10px;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
-}
-
-.arrow-up {
-  width: 0;
-  height: 0;
-  border-left: 10px solid transparent;
-  border-right: 10px solid transparent;
-  border-bottom: 10px solid black;
 }

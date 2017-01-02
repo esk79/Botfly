@@ -50,7 +50,8 @@ function getCookie(name) {
 }
 
 
-$("#cart").on("click", function () {
-    $(".shopping-cart").fadeToggle("fast");
-});
+  $('.dropdown').change(function(e){
+       // Your event handler
+      console.log("change")
+    });
 

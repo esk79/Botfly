@@ -8,6 +8,7 @@ terminalMargin = 2;
 //sets the terminal text color and font-size
 function textStyle(message) {
     return "[[;#90b1e5;black]" + message + "]";
+    //return message;
 }
 
 //handle terminal text zoom in/out on hotkey commands
