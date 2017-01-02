@@ -48,3 +48,10 @@ function getCookie(name) {
     var parts = value.split("; " + name + "=");
     if (parts.length >= 2) return parts.pop().split(";").shift();
 }
+
+
+  $('.dropdown').change(function(e){
+       // Your event handler
+      console.log("change")
+    });
+

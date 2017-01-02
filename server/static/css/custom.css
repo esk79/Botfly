@@ -3,6 +3,98 @@
     height: 25px;
 }
 
-.btn-sm, .btn-xs, .dropdown-header, .dropdown-menu>li>a, .navbar, .table, table {
-    font-size:16px;
+.btn-sm, .btn-xs, .dropdown-header, .dropdown-menu > li > a, .navbar, .table, table {
+    font-size: 16px;
+}
+
+/*-------------------------
+	Download dropdown
+-------------------------*/
+
+.open > .dropdown-menu {
+    animation-name: slidenavAnimation;
+    animation-duration: .4s;
+    animation-iteration-count: 1;
+    animation-timing-function: ease;
+    animation-fill-mode: forwards;
+
+    -webkit-animation-name: slidenavAnimation;
+    -webkit-animation-duration: .4s;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-timing-function: ease;
+    -webkit-animation-fill-mode: forwards;
+
+    -moz-animation-name: slidenavAnimation;
+    -moz-animation-duration: .4s;
+    -moz-animation-iteration-count: 1;
+    -moz-animation-timing-function: ease;
+    -moz-animation-fill-mode: forwards;
+}
+
+.arrow-up {
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 10px solid #4e5d6c;
+    display: none;
+
+    animation-name: slidenavAnimation;
+    animation-duration: .4s;
+    animation-iteration-count: 1;
+    animation-timing-function: ease;
+    animation-fill-mode: forwards;
+
+    -webkit-animation-name: slidenavAnimation;
+    -webkit-animation-duration: .4s;
+    -webkit-animation-iteration-count: 1;
+    -webkit-animation-timing-function: ease;
+    -webkit-animation-fill-mode: forwards;
+
+    -moz-animation-name: slidenavAnimation;
+    -moz-animation-duration: .4s;
+    -moz-animation-iteration-count: 1;
+    -moz-animation-timing-function: ease;
+    -moz-animation-fill-mode: forwards;
+}
+
+
+@keyframes slidenavAnimation {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@-webkit-keyframes slidenavAnimation {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+
+.dropdown-menu {
+    min-width: 350px;
+    padding: 12px 0px 0px 0px;
+}
+
+.rcorners {
+    border-radius: 10px;
+    padding-top: 10px;
+}
+
+.progress-label {
+    float: left;
+    margin-right: 1em;
+}
+
+.navbar-nav > li > .dropdown-menu {
+    margin-top: 10px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
 }
