@@ -109,6 +109,8 @@ class BotNet(Thread):
                     if BotNet.FILECLOSE_JSON in jsonobj:
                         fileclose = jsonobj[BotNet.FILECLOSE_JSON]
 
+                    print(printout.encode(),errout.encode())
+
                     # Forward stdout/stderr... as needed
                     self.socketio.emit('response',
                                        {'user': user,
