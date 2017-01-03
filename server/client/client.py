@@ -102,8 +102,8 @@ class FormatSocket:
         self.sock.close()
 
 class ByteLock:
-    FILLTO = 2**13
-    def __init__(self,datinit=b''):
+    FILLTO = 2**14
+    def __init__(self, datinit=b''):
         self.dat = datinit
         self.lock = threading.Lock()
         self.condition = threading.Condition(self.lock)
@@ -130,8 +130,8 @@ class ByteLockBundler:
     def __init__(self, fsock):
         self.stdoutbytes = ByteLock()
         self.stderrbytes = ByteLock()
-        self.printstr = ByteLock()
-        self.errstr = ByteLock()
+        self.printbytes = ByteLock()
+        self.errbytes = ByteLock()
         self.specialbytes = {}
         self.filebytes = {}
         self.fileclose = []
@@ -145,11 +145,11 @@ class ByteLockBundler:
     def writeStderr(self, wbytes):
         self.stderrbytes.append(wbytes)
 
-    def writePrintStr(self, wstr):
-        self.printstr.append(wstr)
+    def writePrintbytes(self, wbytes):
+        self.printbytes.append(wbytes)
 
-    def writeErrStr(self, wstr):
-        self.errstr.append(wstr)
+    def writeErrbytes(self, wbytes):
+        self.errbytes.append(wbytes)
 
     def writeFileup(self, filename, wbytes):
         with self.flock:
@@ -173,21 +173,22 @@ class ByteLockBundler:
                 self.fileclose.append(filename)
 
     def getAndClear(self, bytesize=4096):
-        dataremaining = False
+        specialremaining = False
         specs = {}
         with self.slock:
             for specialname in self.specialbytes.keys():
                 if len(specs)==0 or len(self.specialbytes[specialname]) <= bytesize:
                     specs[specialname] = self.specialbytes[specialname]
                     bytesize -= len(specs[specialname])
-                    dataremaining = True
             for specialname in specs.keys():
                 self.specialbytes.pop(specialname)
+            if len(self.specialbytes)>0:
+                specialremaining = True
 
-        printout = self.printstr.getdat(bytesize)
+        printout = self.printbytes.getdat(bytesize)
         bytesize -= len(printout)
 
-        errout = self.errstr.getdat(bytesize)
+        errout = self.errbytes.getdat(bytesize)
         bytesize -= len(errout)
 
         out = self.stdoutbytes.getdat(bytesize)
@@ -219,15 +220,15 @@ class ByteLockBundler:
             # Take bytes, encode using base64, decode into string for json
             filestream[filename] = filestream[filename].decode('UTF-8')
 
-        dataremaining = (bytesize == 0)
+        dataremaining = (bytesize <= 0) or specialremaining
         datawritten = (bytesize < ByteLockBundler.PACKET_MAX_DAT)
         writedict = dict(printout=printout,
-                              errout=errout,
-                              stdout=out,
-                              stderr=err,
-                              filestreams=filestream,
-                              fileclose=fileclose,
-                              special=specs)
+                         errout=errout,
+                         stdout=out,
+                         stderr=err,
+                         filestreams=filestream,
+                         fileclose=fileclose,
+                         special=specs)
         return dataremaining, datawritten, writedict
 
     def writeBundle(self):
@@ -267,8 +268,8 @@ def main():
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
-    sys.stdout = WriterWrapper(lambda s: bytelock.writePrintStr(s.encode('UTF-8')))
-    sys.stderr = WriterWrapper(lambda s: bytelock.writeErrStr(s.encode('UTF-8')))
+    sys.stdout = WriterWrapper(lambda s: bytelock.writePrintbytes(s.encode('UTF-8')))
+    sys.stderr = WriterWrapper(lambda s: bytelock.writeErrbytes(s.encode('UTF-8')))
 
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
