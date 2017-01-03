@@ -4,13 +4,16 @@ from flask import Flask, render_template, session, request, Response, send_file,
 from flask import make_response
 from flask_socketio import SocketIO, emit
 from functools import wraps
+import json
 
 # Loading library depends on how we want to setup the project later,
 # for now this will do
 try:
-    from server.botnetclasses import *
+    from server.botnetclasses import BotNet
+    from server.botnetserver import BotServer
 except:
-    from botnetclasses import *
+    from botnetclasses import BotNet
+    from botnetserver import BotServer
 
 ''' See accompanying README for TODOs.
 
