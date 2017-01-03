@@ -141,7 +141,6 @@ function generateSearchBar(response) {
 //render finder with server response
 function renderFinder(response) {
     var value = $('.div.search.input-group')
-    console.log(value)
     generateFileFolderIcons(response);
     generateBreadcrumbsIcon(response);
     generateSearchBar(response);

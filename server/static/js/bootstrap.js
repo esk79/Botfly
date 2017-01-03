@@ -796,6 +796,11 @@ if (typeof jQuery === 'undefined') {
     }
 
     function clearMenus(e) {
+
+        if ($('.dropdown-menu').is(":visible")) {
+              $(".arrow-up").hide();
+        }
+
         if (e && e.which === 3) return
         $(backdrop).remove()
         $(toggle).each(function () {
@@ -817,6 +822,7 @@ if (typeof jQuery === 'undefined') {
     }
 
     Dropdown.prototype.toggle = function (e) {
+
 
         $(".arrow-up").toggle();
 
