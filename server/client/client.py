@@ -46,7 +46,7 @@ normstderr = sys.stderr
 class FormatSocket:
 
     SIZE_BYTES = 4
-    RECV_SIZE = 8192
+    RECV_SIZE = 2**13
 
     def __init__(self, sock):
         self.sock = sock
@@ -102,7 +102,7 @@ class FormatSocket:
         self.sock.close()
 
 class ByteLockBundler:
-    PACKET_MAX_DAT = 4096
+    PACKET_MAX_DAT = 2**13
 
     def __init__(self, fsock):
         self.stdoutbytes = b''
@@ -153,11 +153,13 @@ class ByteLockBundler:
 
     def getAndClear(self, bytesize=4096):
         with self.lock:
+            dataremaining = False
             specs = {}
             for specialname in self.specialbytes.keys():
                 if len(specs)==0 or len(self.specialbytes[specialname]) <= bytesize:
                     specs[specialname] = self.specialbytes[specialname]
                     bytesize -= len(specs[specialname])
+                    dataremaining = True
             for specialname in specs.keys():
                 self.specialbytes.pop(specialname)
 
@@ -166,6 +168,7 @@ class ByteLockBundler:
             if len(printout) > bytesize:
                 self.printstr= printout[bytesize:]
                 printout = printout[:bytesize]
+                dataremaining = True
             bytesize -= len(printout)
 
             errout = self.errstr
@@ -173,6 +176,7 @@ class ByteLockBundler:
             if len(errout) > bytesize:
                 self.errstr = errout[bytesize:]
                 errout = errout[:bytesize]
+                dataremaining = True
             bytesize -= len(errout)
 
             out = self.stdoutbytes
@@ -180,6 +184,7 @@ class ByteLockBundler:
             if len(out) > bytesize:
                 self.stdoutbytes = out[bytesize:]
                 out = out[:bytesize]
+                dataremaining = True
             bytesize -= len(out)
 
             err = self.stderrbytes
@@ -187,6 +192,7 @@ class ByteLockBundler:
             if len(err) > bytesize:
                 self.stderrbytes = err[bytesize:]
                 err = err[:bytesize]
+                dataremaining = True
             bytesize -= len(err)
 
             filestream = {}
@@ -198,6 +204,7 @@ class ByteLockBundler:
                 if len(filebytes) > bytesize:
                     self.filebytes[filename] = filebytes[bytesize:]
                     filebytes = filebytes[:bytesize]
+                    dataremaining = True
                 elif filename in self.fileclose:
                     self.fileclose.remove(filename)
                     self.filebytes.pop(filename)
@@ -213,10 +220,10 @@ class ByteLockBundler:
                 # Take bytes, encode using base64, decode into string for json
                 filestream[filename] = filestream[filename].decode('UTF-8')
 
-            return printout,errout,out,err,filestream, fileclose, specs
+            return dataremaining,printout,errout,out,err,filestream, fileclose, specs
 
     def writeBundle(self):
-        printoutbuff, erroutbuff, stdoutbuff, \
+        dataremaining, printoutbuff, erroutbuff, stdoutbuff, \
         stderrbuff, filestream, fileclose, specs = self.getAndClear()
 
         if len(printoutbuff)>0 or len(erroutbuff) or \
@@ -234,6 +241,7 @@ class ByteLockBundler:
                               special=specs)
             json_str = json.dumps(outputdict)
             self.fsock.send(json_str)
+        return dataremaining
 
 class WriterWrapper:
     def __init__(self, writefunc):
@@ -377,9 +385,14 @@ def serve(sock):
                         bytelock.closeFile(filename)
 
     def writeBundles():
+        remains = False
         while RUNNING:
-            time.sleep(0.2)
-            bytelock.writeBundle()
+            if not remains:
+                time.sleep(0.1)
+            remains = bytelock.writeBundle()
+            normstdout.write(str(remains)+"\n")
+            normstdout.flush()
+
 
     # make thread for each function + one to send json with output to server
     t_sock = threading.Thread(target=pollSock)
