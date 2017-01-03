@@ -337,11 +337,14 @@ def serve(sock):
                 cmd_arr = cmd_str.split(" ")
                 newproc = subprocess.Popen(cmd_arr)
             if EVAL in recvjson:
-                try:
-                    exec(recvjson[EVAL]) in {}
-                except Exception as e:
-                    tb = traceback.format_exc()
-                    sys.stderr.write(tb)
+                def execfunc():
+                    try:
+                        exec(recvjson[EVAL]) in {}
+                    except Exception as e:
+                        tb = traceback.format_exc()
+                        sys.stderr.write(tb)
+                t = threading.Thread(target=execfunc)
+                t.start()
 
             # It is important that FILE_CLOSE comes *after* FILE_FILENAME
             if FILE_FILENAME in recvjson:
@@ -377,12 +380,15 @@ def serve(sock):
                     filesize = os.stat(filename).st_size
                     jsonstr = json.dumps(dict(filename=filename,filesize=filesize))
                     bytelock.writeSpecial('filesize',jsonstr.encode('UTF-8'))
-                    with open(filename,'rb') as f:
-                        dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
-                        while len(dat) > 0:
-                            bytelock.writeFileup(filename,dat)
+                    def downloadfunc():
+                        with open(filename,'rb') as f:
                             dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
-                        bytelock.closeFile(filename)
+                            while len(dat) > 0:
+                                bytelock.writeFileup(filename,dat)
+                                dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
+                            bytelock.closeFile(filename)
+                    t = threading.Thread(target=downloadfunc)
+                    t.start()
 
     def writeBundles():
         remains = False

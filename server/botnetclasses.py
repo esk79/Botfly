@@ -339,6 +339,12 @@ class BotNetFileManager:
         if os.path.exists(self.filenamefile):
             with open(self.filenamefile,"rb") as jsonfile:
                 self.filedets = pickle.load(jsonfile)
+                for uf in list(self.filedets.keys()):
+                    filepath = self.filedets[uf][0]
+                    if not os.path.exists(filepath):
+                        self.filedets.pop(uf)
+            with open(self.filenamefile, "wb") as jsonfile:
+                pickle.dump(self.filedets, jsonfile)
 
     def appendBytesToFile(self, user, filename, wbytes):
         uf = (user, filename)
@@ -407,6 +413,8 @@ class BotNetFileManager:
                 real_filename = self.filedets[uf][0]
                 self.filedets.pop(uf)
                 os.remove(real_filename)
+                with open(self.filenamefile, "wb") as jsonfile:
+                    pickle.dump(self.filedets, jsonfile)
                 return True
             return False
 
