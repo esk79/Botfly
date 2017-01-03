@@ -133,11 +133,9 @@ class ByteLockBundler:
 
     def writeFileup(self, filename, wbytes):
         with self.lock:
-            wbytes = base64.b64encode(wbytes)
             if filename not in self.filebytes:
-                self.filebytes[filename] = wbytes
-            else:
-                self.filebytes[filename] += wbytes
+                self.filebytes[filename] = b''
+            self.filebytes[filename] += wbytes
 
     def writeSpecial(self, name, wbytes):
         '''
@@ -155,7 +153,6 @@ class ByteLockBundler:
 
     def getAndClear(self, bytesize=4096):
         with self.lock:
-
             specs = {}
             for specialname in self.specialbytes.keys():
                 if len(specs)==0 or len(self.specialbytes[specialname]) <= bytesize:
@@ -205,8 +202,9 @@ class ByteLockBundler:
                     self.fileclose.remove(filename)
                     self.filebytes.pop(filename)
                     fileclose.append(filename)
-                bytesize -= len(err)
-                filestream[filename] = filebytes
+                wfilebytes =  base64.b64encode(filebytes)
+                bytesize -= len(wfilebytes)
+                filestream[filename] = wfilebytes
 
             # Abuse python to convert to strings
             out = out.decode('UTF-8')
@@ -267,8 +265,8 @@ def main():
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
-    sys.stdout = WriterWrapper(bytelock.writePrintStr)
-    sys.stderr = WriterWrapper(bytelock.writeErrStr)
+    #sys.stdout = WriterWrapper(bytelock.writePrintStr)
+    #sys.stderr = WriterWrapper(bytelock.writeErrStr)
 
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
