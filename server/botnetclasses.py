@@ -41,6 +41,7 @@ class BotNet(Thread):
         self.filemanager = BotNetFileManager(downloadpath)
         self.payloadpath = payloadpath
         self.payloadfiles = []
+        self.payloaddescriptions = {}
         self.downloaddir = downloadpath
 
     def addConnection(self, user, conn):
@@ -178,12 +179,20 @@ class BotNet(Thread):
             return False
 
     def getPayloads(self):
+        self.genPayloads()
+        return self.payloadfiles
+
+    def getPayloadDescriptions(self):
+        self.genPayloads()
+        return self.payloaddescriptions
+
+    def genPayloads(self):
         if len(self.payloadfiles)==0:
             for root, dirs, files in os.walk(self.payloadpath):
                 for file in files:
                     if file.endswith(BotNet.PAYLOAD_EXT):
                         self.payloadfiles.append(os.path.join(root,file)[len(self.payloadpath)+1:-len(BotNet.PAYLOAD_EXT)])
-        return self.payloadfiles
+
 
     def sendPayload(self, user, payload):
         with self.connlock:
@@ -217,6 +226,7 @@ class BotNet(Thread):
 
     def deleteFile(self, user, filename):
         return self.filemanager.deleteFile(user,filename)
+
 
 
 class BotServer(Thread):
