@@ -117,3 +117,12 @@
 .font-large{
     font-size: 16px;
 }
+
+.glyphicon glyphicon-remove{
+    font-size: 20px;
+}
+
+.container, .container-fluid {
+    padding-left: 10px;
+    padding-right: 10px;
+}
