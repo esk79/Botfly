@@ -67,8 +67,12 @@ var data = [{
 }]
 
 
-function increaseDownloadsNumber() {
-    $('span.num-downloads.badge').html(parseInt($('span.num-downloads.badge').html(), 10) + 1)
+function updateDownloadsNumber(data) {
+    var num = data.length;
+    if (parseInt($('span.num-downloads.badge').html(), 10) != num){
+        console.log("here")
+        $('span.num-downloads.badge').html(num)
+    }
 }
 
 function decreaseDownloadsNumber() {
@@ -82,14 +86,12 @@ function updateProgressBar(filename, percent) {
 
 function addInProgress(filename, percent) {
     filenameParsed = filename.split('.')[0];
-    increaseDownloadsNumber()
     var downloadManager = $('div.downloads')
     downloadManager.prepend('<div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="progress col-md-6"> <div class="progress-bar progress-bar-striped active progress-' + filenameParsed + '"role="progressbar"aria-valuenow="' + percent + '" aria-valuemin="0" aria-valuemax="100"style="width:' + percent + '%"></div> </div> </div> ')
 }
 
 function addCompleted(filename) {
     filenameParsed = filename.split('.')[0];
-    increaseDownloadsNumber()
     var downloadManager = $('div.downloads')
     downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-6"> <button onclick="downloadToClient(' + filename + ')" type="button" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></button> </div> </div>')
 }
@@ -112,6 +114,8 @@ function populateDownloadsDropdown(data) {
 // get currently downloading files from server
 function getDownloading() {
     $.get("/downloader", function (data, status) {
+        $('div.downloads').empty()
+        updateDownloadsNumber(data)
         populateDownloadsDropdown(data)
     });
 }
@@ -128,11 +132,5 @@ function downloadToClient(filename) {
     });
 }
 
-
-getDownloading();
-
-//while (true) {
-//    if ($('.dropdown-menu').is(':visible')) {
-//        console.log("test")
-//    }
-//}
+getDownloading()
+setInterval(function(){ getDownloading(); }, 3000);

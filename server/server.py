@@ -170,7 +170,7 @@ if __name__ == "__main__":
     botnet.start()
     botserver.start()
 
-    socketio.run(app, debug=True, use_reloader=False)
+    socketio.run(app, debug=True, use_reloader=False,  port=5500)
 
 # TODO: implement HTTPS
 #
