@@ -265,8 +265,8 @@ def main():
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
-    #sys.stdout = WriterWrapper(bytelock.writePrintStr)
-    #sys.stderr = WriterWrapper(bytelock.writeErrStr)
+    sys.stdout = WriterWrapper(bytelock.writePrintStr)
+    sys.stderr = WriterWrapper(bytelock.writeErrStr)
 
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
