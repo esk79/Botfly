@@ -49,9 +49,34 @@ function getCookie(name) {
     if (parts.length >= 2) return parts.pop().split(";").shift();
 }
 
+/*************************************
+ Downloads dropdown code begins here *
+ **************************************/
 
-  $('.dropdown').change(function(e){
-       // Your event handler
-      console.log("change")
-    });
 
+function increaseDownloadsNumber() {
+    $('span.num-downloads.badge').html(parseInt($('span.num-downloads.badge').html(), 10) + 1)
+}
+
+function decreaseDownloadsNumber() {
+    $('span.num-downloads.badge').html(parseInt($('span.num-downloads.badge').html(), 10) - 1)
+}
+
+function updateProgressBar(filename, percent) {
+    filenameParsed = filename.split('.')[0];
+    $('.progress-' + filenameParsed).attr('aria-valuenow', percent).css('width', percent + '%');
+}
+
+function addInProgress(filename) {
+    filenameParsed = filename.split('.')[0];
+    increaseDownloadsNumber()
+    var downloadManager = $('div.downloads')
+    downloadManager.prepend('<div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="progress col-md-6"> <div class="progress-bar progress-bar-striped active progress-' + filenameParsed + '"role="progressbar"aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"style="width: 0%"></div> </div> </div> ')
+}
+
+function addCompleted(filename) {
+    filenameParsed = filename.split('.')[0];
+    increaseDownloadsNumber()
+    var downloadManager = $('div.downloads')
+    downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-6"> <button type="button" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></button> </div> </div>')
+}

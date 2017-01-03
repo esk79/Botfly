@@ -53,7 +53,6 @@ socket.on('success', function (msg) {
     terminal.echo(textStyle(msg.message))
 });
 
-
 //upload a file to the server
 $(function () {
     $('#upload-file').change(function () {

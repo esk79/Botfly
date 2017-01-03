@@ -80,12 +80,14 @@
 
 .dropdown-menu {
     min-width: 350px;
-    padding: 12px 0px 0px 0px;
+    padding: 0px 0px 0px 0px;
+    max-height: 500px;
+    overflow-y:scroll;
 }
 
 .rcorners {
     border-radius: 10px;
-    padding-top: 10px;
+    padding-top: 0px;
 }
 
 .progress-label {
@@ -97,4 +99,21 @@
     margin-top: 10px;
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
+}
+
+.vertical-align {
+    display: flex;
+    align-items: center;
+}
+
+.progress {
+    margin-bottom: 0px;
+}
+
+.row-margin{
+    margin: 20px 0px 20px 0px;
+}
+
+.font-large{
+    font-size: 16px;
 }
