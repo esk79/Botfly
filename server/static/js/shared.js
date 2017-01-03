@@ -84,7 +84,7 @@ function updateProgressBar(filename, percent) {
     $('.progress-' + filenameParsed).attr('aria-valuenow', percent).css('width', percent + '%');
 }
 
-function addInProgress(filename, percent) {
+function addInProgress(filename, percent, path) {
     filenameParsed = filename.split('.')[0];
     var downloadManager = $('div.downloads')
     downloadManager.prepend('<div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="progress col-md-5"> <div class="progress-bar progress-bar-striped active progress-' + filenameParsed + '"role="progressbar"aria-valuenow="' + percent + '" aria-valuemin="0" aria-valuemax="100"style="width:' + percent + '%"></div> </div>  <a onclick="deleteFile(\'' + path +' \')" class="col-md-2"><span class="glyphicon glyphicon-remove pull-right"></span></a></div>')
@@ -115,7 +115,7 @@ function populateDownloadsDropdown(data) {
         if (downloadPercent == 100) {
             addCompleted(filename, file['filename'])
         } else {
-            addInProgress(filename, downloadPercent)
+            addInProgress(filename, downloadPercent, file['filename'])
         }
     });
 }
@@ -142,5 +142,5 @@ function deleteFile(file) {
 getDownloading()
 setInterval(function () {
     getDownloading();
-}, 3000);
+}, 1000);
 
