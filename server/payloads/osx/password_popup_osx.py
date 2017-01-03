@@ -46,7 +46,11 @@ proc = subprocess.Popen(['osascript', '-'],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE)
 
-out, err = proc.communicate(applescript)
+out, err = proc.communicate(applescript.encode('UTF-8'))
+if type(out)==bytes:
+    out = out.decode('UTF-8')
+if type(err)==bytes:
+    err = err.decode('UTF-8')
 
 sys.stderr.write(err[:-1])
 sys.stdout.write("Password: {}".format(out[:-1]))
