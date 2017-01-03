@@ -390,8 +390,6 @@ def serve(sock):
             if not remains:
                 time.sleep(0.1)
             remains = bytelock.writeBundle()
-            normstdout.write(str(remains)+"\n")
-            normstdout.flush()
 
 
     # make thread for each function + one to send json with output to server
