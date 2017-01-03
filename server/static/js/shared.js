@@ -51,7 +51,20 @@ function getCookie(name) {
 
 /*************************************
  Downloads dropdown code begins here *
- **************************************/
+ *************************************/
+
+//used for testing
+var data = [{
+    "filename": "/Users/EvanKing/Documents/Dev/Hacking/Botfly/server/client/client.py",
+    "downloaded": 10252,
+    "user": "EvanKing",
+    "size": 16588
+}, {
+    "filename": "/Users/EvanKing/Documents/BTRY3010./Homework/HW9/KingE-HW9-162.pdf",
+    "downloaded": 0,
+    "user": "EvanKing",
+    "size": 142609
+}]
 
 
 function increaseDownloadsNumber() {
@@ -67,16 +80,59 @@ function updateProgressBar(filename, percent) {
     $('.progress-' + filenameParsed).attr('aria-valuenow', percent).css('width', percent + '%');
 }
 
-function addInProgress(filename) {
+function addInProgress(filename, percent) {
     filenameParsed = filename.split('.')[0];
     increaseDownloadsNumber()
     var downloadManager = $('div.downloads')
-    downloadManager.prepend('<div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="progress col-md-6"> <div class="progress-bar progress-bar-striped active progress-' + filenameParsed + '"role="progressbar"aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"style="width: 0%"></div> </div> </div> ')
+    downloadManager.prepend('<div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="progress col-md-6"> <div class="progress-bar progress-bar-striped active progress-' + filenameParsed + '"role="progressbar"aria-valuenow="' + percent + '" aria-valuemin="0" aria-valuemax="100"style="width:' + percent + '%"></div> </div> </div> ')
 }
 
 function addCompleted(filename) {
     filenameParsed = filename.split('.')[0];
     increaseDownloadsNumber()
     var downloadManager = $('div.downloads')
-    downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-6"> <button type="button" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></button> </div> </div>')
+    downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-6"> <button onclick="downloadToClient(' + filename + ')" type="button" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></button> </div> </div>')
 }
+
+function populateDownloadsDropdown(data) {
+    data.forEach(function (file) {
+        var pathParts = file['filename'].split("/")
+        var filename = pathParts[pathParts.length - 1]
+        var user = file['user']
+        var downloadPercent = Math.floor((file['downloaded'] / file['size']) * 100)
+        //download complete
+        if (downloadPercent == 1) {
+            addCompleted(filename)
+        } else {
+            addInProgress(filename, downloadPercent)
+        }
+    });
+}
+
+// get currently downloading files from server
+function getDownloading() {
+    $.get("/downloader", function (data, status) {
+        populateDownloadsDropdown(data)
+    });
+}
+
+//download file from server to browser
+function downloadToClient(filename) {
+    $.get("/downloader?file=" + filename, function (data, status) {
+        var blob = new Blob([_base64ToArrayBuffer(data)]);
+        var link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        var pathParts = filename.split("/");
+        link.download = pathParts[pathParts.length - 1];
+        link.click();
+    });
+}
+
+
+getDownloading();
+
+//while (true) {
+//    if ($('.dropdown-menu').is(':visible')) {
+//        console.log("test")
+//    }
+//}

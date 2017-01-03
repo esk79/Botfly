@@ -135,27 +135,8 @@ function generateSearchBar(response) {
         console.log(value)
         generateFileFolderIcons(response, value)
     });
-    //}).on('keyup', function (e) {
-    //
-    //    // Clicking 'ESC' button triggers focusout and cancels the search
-    //    var search = $(this);
-    //    if (e.keyCode == 27) {
-    //        search.trigger('focusout');
-    //    }
-    //
-    //}).focusout(function (e) {
-    //
-    //    // Cancel the search
-    //    var search = $(this);
-    //    if (!search.val().trim().length) {
-    //        search.hide();
-    //        search.parent().find('span').show();
-    //    }
-    //
-    //});
 
 }
-
 
 //render finder with server response
 function renderFinder(response) {
@@ -221,12 +202,7 @@ function downloadFile(filename) {
             file: filename
         },
         success: function (data) {
-            var blob = new Blob([_base64ToArrayBuffer(data)]);
-            var link = document.createElement('a');
-            link.href = window.URL.createObjectURL(blob);
-            var pathParts = filename.split("/");
-            link.download = pathParts[pathParts.length - 1];
-            link.click();
+            console.log(data)
         }
     });
 }
