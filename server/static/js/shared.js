@@ -69,7 +69,7 @@ var data = [{
 
 function updateDownloadsNumber(data) {
     var num = data.length;
-    if (parseInt($('span.num-downloads.badge').html(), 10) != num){
+    if (parseInt($('span.num-downloads.badge').html(), 10) != num) {
         console.log("here")
         $('span.num-downloads.badge').html(num)
     }
@@ -90,21 +90,30 @@ function addInProgress(filename, percent) {
     downloadManager.prepend('<div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="progress col-md-6"> <div class="progress-bar progress-bar-striped active progress-' + filenameParsed + '"role="progressbar"aria-valuenow="' + percent + '" aria-valuemin="0" aria-valuemax="100"style="width:' + percent + '%"></div> </div> </div> ')
 }
 
-function addCompleted(filename) {
+function addCompleted(filename, path) {
     filenameParsed = filename.split('.')[0];
     var downloadManager = $('div.downloads')
-    downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-6"> <button onclick="downloadToClient(' + filename + ')" type="button" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></button> </div> </div>')
+    downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-6"> <a href="/downloader?file=' + path + '" download="' + filename + '" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></a> </div> </div>')
 }
 
 function populateDownloadsDropdown(data) {
+
+    //no current download files
+    if (data.length == 0) {
+        var downloadManager = $('div.downloads')
+        downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">No files.</span><div class="col-md-6">')
+        return;
+    }
+
     data.forEach(function (file) {
         var pathParts = file['filename'].split("/")
         var filename = pathParts[pathParts.length - 1]
         var user = file['user']
         var downloadPercent = Math.floor((file['downloaded'] / file['size']) * 100)
+
         //download complete
-        if (downloadPercent == 1) {
-            addCompleted(filename)
+        if (downloadPercent == 100) {
+            addCompleted(filename, file['filename'])
         } else {
             addInProgress(filename, downloadPercent)
         }
@@ -120,17 +129,8 @@ function getDownloading() {
     });
 }
 
-//download file from server to browser
-function downloadToClient(filename) {
-    $.get("/downloader?file=" + filename, function (data, status) {
-        var blob = new Blob([_base64ToArrayBuffer(data)]);
-        var link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        var pathParts = filename.split("/");
-        link.download = pathParts[pathParts.length - 1];
-        link.click();
-    });
-}
-
 getDownloading()
-setInterval(function(){ getDownloading(); }, 3000);
+setInterval(function () {
+    getDownloading();
+}, 3000);
+
