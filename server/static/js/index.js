@@ -195,15 +195,22 @@ generateSearchBar()
 $(document).ready(function () {
     $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}</style>');
     $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin + 'px;}</style>');
-    setTimeout(function(){
-        console.log("Sending request");
-        $.ajax({
-            type: 'POST',
-            url: '/log',
-            data: null,
-            contentType: false,
-            cache: false,
-            processData: false,
-            success: null
-        });},100);
+    $.ajax({
+        type: 'POST',
+        url: '/log',
+        data: null,
+        contentType: false,
+        cache: false,
+        processData: false,
+        success: function (data){
+            for (var index in data){
+                var entry = data[index];
+                if (entry[0] == 0){
+                    terminal.echo(textStyle(entry[1]));
+                } else if (entry[0] == 1){
+                    terminal.error(entry[1]);
+                }
+            }
+        }
+    });
 });

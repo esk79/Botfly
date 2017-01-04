@@ -147,28 +147,13 @@ class BotNet(Thread):
                     # Connection was interrupted
                     self.removeConnection(user)
 
-    def resendLog(self, user):
+    def getLog(self, user):
         with self.connlock:
+            log = []
             if user in self.logs:
                 for entry in self.logs[user].log:
-                    if entry[0] == BotLog.STDOUT:
-                        self.socketio.emit('response',
-                                           {'user': user,
-                                            'printout': '',
-                                            'errout': '',
-                                            'stdout': entry[1],
-                                            'stderr': ''
-                                            },
-                                           namespace="/bot")
-                    if entry[0] == BotLog.STDERR:
-                        self.socketio.emit('response',
-                                           {'user': user,
-                                            'printout': '',
-                                            'errout': '',
-                                            'stdout': '',
-                                            'stderr': entry[1]
-                                            },
-                                           namespace="/bot")
+                        log.append(entry)
+            return log
 
     def sendStdin(self, user, cmd):
         with self.connlock:
