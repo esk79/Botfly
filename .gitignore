@@ -2,3 +2,4 @@
 .idea/
 **/downloads/*
 **/__pycache__/
+**/cert/*

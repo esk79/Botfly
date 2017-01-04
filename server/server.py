@@ -184,6 +184,8 @@ def send_command(cmd):
 
 # Crypto stuff
 def create_self_signed_cert(certfile, keyfile, certargs, cert_dir="."):
+    if not os.path.isdir(cert_dir):
+        os.mkdir(cert_dir)
     C_F = os.path.join(cert_dir, certfile)
     K_F = os.path.join(cert_dir, keyfile)
     if not os.path.exists(C_F) or not os.path.exists(K_F):
@@ -218,6 +220,7 @@ if __name__ == "__main__":
 
     USE_SSL = False
     if USE_SSL:
+        CERT_DIR = "cert"
         CERT_FILE = "cert.pem"
         KEY_FILE = "key.pem"
         create_self_signed_cert(CERT_FILE, KEY_FILE,
@@ -226,7 +229,10 @@ if __name__ == "__main__":
                                  "State": "NY",
                                  "City": "Ithaca",
                                  "Organization": "CHC",
-                                 "Org. Unit": "Side-Projects"})
+                                 "Org. Unit": "Side-Projects"},
+                                cert_dir=CERT_DIR)
+        CERT_FILE = os.path.join(CERT_DIR,CERT_FILE)
+        KEY_FILE = os.path.join(CERT_DIR,KEY_FILE)
         socketio.run(app, debug=True, use_reloader=False, certfile=CERT_FILE, keyfile=KEY_FILE, port=5500)
     else:
         socketio.run(app, debug=True, use_reloader=False, port=5500)
