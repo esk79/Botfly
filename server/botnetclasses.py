@@ -107,20 +107,22 @@ class BotNet(Thread):
                     if BotNet.FILECLOSE_JSON in jsonobj:
                         fileclose = jsonobj[BotNet.FILECLOSE_JSON]
 
-                    log = self.logs[user]
-                    log.logstdout(printout)
-                    log.logstderr(errout)
-                    log.logstdout(out)
-                    log.logstderr(err)
-
                     # Forward stdout/stderr... as needed
-                    self.socketio.emit('response',
-                                       {'user': user,
-                                        'printout': printout,
-                                        'errout': errout,
-                                        'stdout': out,
-                                        'stderr': err},
-                                       namespace="/bot")
+                    totallen = len(printout) + len(errout) + len(out) + len(err)
+                    if totallen > 0:
+                        log = self.logs[user]
+                        log.logstdout(printout)
+                        log.logstderr(errout)
+                        log.logstdout(out)
+                        log.logstderr(err)
+
+                        self.socketio.emit('response',
+                                           {'user': user,
+                                            'printout': printout,
+                                            'errout': errout,
+                                            'stdout': out,
+                                            'stderr': err},
+                                           namespace="/bot")
 
                     if len(special) > 0:
                         if BotNet.LS_JSON in special:
@@ -144,6 +146,29 @@ class BotNet(Thread):
                 except IOError:
                     # Connection was interrupted
                     self.removeConnection(user)
+
+    def resendLog(self, user):
+        with self.connlock:
+            if user in self.logs:
+                for entry in self.logs[user].log:
+                    if entry[0] == BotLog.STDOUT:
+                        self.socketio.emit('response',
+                                           {'user': user,
+                                            'printout': '',
+                                            'errout': '',
+                                            'stdout': entry[1],
+                                            'stderr': ''
+                                            },
+                                           namespace="/bot")
+                    if entry[0] == BotLog.STDERR:
+                        self.socketio.emit('response',
+                                           {'user': user,
+                                            'printout': '',
+                                            'errout': '',
+                                            'stdout': '',
+                                            'stderr': entry[1]
+                                            },
+                                           namespace="/bot")
 
     def sendStdin(self, user, cmd):
         with self.connlock:

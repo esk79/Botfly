@@ -30,6 +30,7 @@ hotkeys('command+=, command+-', function (event, handler) {
 socket.on('response', function (msg) {
     //error returned from bot
     if (msg.user === getCookie('bot')) {
+        console.log(msg);
         if (msg.printout != '') {
             // TODO: change text color?
             terminal.echo(textStyle(msg.printout));
@@ -194,4 +195,15 @@ generateSearchBar()
 $(document).ready(function () {
     $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}</style>');
     $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin + 'px;}</style>');
+    setTimeout(function(){
+        console.log("Sending request");
+        $.ajax({
+            type: 'POST',
+            url: '/log',
+            data: null,
+            contentType: false,
+            cache: false,
+            processData: false,
+            success: null
+        });},100);
 });
