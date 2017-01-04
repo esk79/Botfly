@@ -133,7 +133,6 @@ function generateSearchBar(response) {
     // in addition to keyboard input.
     filemanager.find('input').on('input', function (e) {
         var value = this.value.trim();
-        console.log(value)
         generateFileFolderIcons(response, value)
     });
 
