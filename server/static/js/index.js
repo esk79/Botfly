@@ -30,7 +30,6 @@ hotkeys('command+=, command+-', function (event, handler) {
 socket.on('response', function (msg) {
     //error returned from bot
     if (msg.user === getCookie('bot')) {
-        console.log(msg);
         if (msg.printout != '') {
             // TODO: change text color?
             terminal.echo(textStyle(msg.printout));

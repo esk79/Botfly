@@ -7,6 +7,7 @@
     font-size: 16px;
 }
 
+
 /*-------------------------
 	Download dropdown
 -------------------------*/
@@ -58,7 +59,6 @@
     -moz-animation-fill-mode: forwards;
 }
 
-
 @keyframes slidenavAnimation {
     from {
         opacity: 0;
@@ -77,12 +77,11 @@
     }
 }
 
-
 .dropdown-menu {
     min-width: 350px;
     padding: 0px 0px 0px 0px;
     max-height: 500px;
-    overflow-y:scroll;
+    overflow-y: scroll;
 }
 
 .rcorners {
@@ -108,17 +107,19 @@
 
 .progress {
     margin-bottom: 0px;
+    padding-left: 0px;
+    padding-right: 0px;
 }
 
-.row-margin{
+.row-margin {
     margin: 20px 0px 20px 0px;
 }
 
-.font-large{
+.font-large {
     font-size: 16px;
 }
 
-.glyphicon glyphicon-remove{
+.glyphicon glyphicon-remove {
     font-size: 20px;
 }
 

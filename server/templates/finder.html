@@ -5,19 +5,30 @@
 
 <body data-gr-c-s-loaded="true">
 
+
 <div class="filemanager">
-    <div class="breadcrumbs"><span class="folderName"></span></div>
 
-    <ul class="data animated" style="">
+    <div class="row">
+        <div class="search col-md-2 input-group"><input type="search" class="form-control" placeholder="Find a file...">
+        </div>
 
-    </ul>
+        <div class="breadcrumbs col-md-10"><span class="folderName"></span></div>
+    </div>
 
-    <div class="nothingfound" style="display: none;">
-        <div class="nofiles"></div>
-        <span>No files here.</span>
+
+    <div class="row">
+        <ul class="data animated" style="">
+
+        </ul>
+
+        <div class="nothingfound" style="display: none;">
+            <div class="nofiles"></div>
+            <span>No files here.</span>
+        </div>
     </div>
 
 </div>
+
 
 <script type="text/javascript"
         src="{{ url_for('static', filename='js/finder.js') }}"></script>

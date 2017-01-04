@@ -57,7 +57,8 @@ function generateFileFolderIcons(response, search) {
         scannedFolders.forEach(function (f) {
             var name = escapeHTML(f.name),
                 icon = '<span class="icon folder"></span>';
-            var folder = $('<li class="folders"><a onclick="getLS(\'' + f.path + '\')" title="' + f.path + '" class="folders">' + icon + '<span class="name">' + name + '</span> </a></li>');
+            //add ability to download: <span onclick="downloadFile(\''  + f.path + '\')" class="details glyphicon glyphicon-download"></span>
+            var folder = $('<li class="folders"><a onclick="getLS(\'' + f.path + '\')" title="' + f.path + '" class="folders">' + icon + '<span class="name">' + name + '</span></a></li>');
             folder.appendTo(fileList);
         });
 
@@ -217,7 +218,7 @@ $(document).ready(function () {
             if (msg.user === getCookie('bot')) {
                 not_received = false;
                 if (msg.special.hasOwnProperty('ls')) {
-                    filemanager.prepend('<div class="search input-group"><input type="search" class="form-control" placeholder="Find a file..."> </div>')
+                    $('.filemanager .search').show();
                     var response = JSON.parse(msg.special['ls']);
                     renderFinder(response);
                 }
