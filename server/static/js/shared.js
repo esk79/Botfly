@@ -53,20 +53,6 @@ function getCookie(name) {
  Downloads dropdown code begins here *
  *************************************/
 
-//used for testing
-var data = [{
-    "filename": "/Users/EvanKing/Documents/Dev/Hacking/Botfly/server/client/client.py",
-    "downloaded": 10252,
-    "user": "EvanKing",
-    "size": 16588
-}, {
-    "filename": "/Users/EvanKing/Documents/BTRY3010./Homework/HW9/KingE-HW9-162.pdf",
-    "downloaded": 0,
-    "user": "EvanKing",
-    "size": 142609
-}]
-
-
 function updateDownloadsNumber(data) {
     var num = data.length;
     if (parseInt($('span.num-downloads.badge').html(), 10) != num) {

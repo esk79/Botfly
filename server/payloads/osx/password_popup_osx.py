@@ -1,3 +1,7 @@
+'''
+NAME: Password Pop-up
+DESCRIPTION: Creates a password pop-up on victim machine asking for use inputted password
+'''
 import subprocess
 import sys
 import os

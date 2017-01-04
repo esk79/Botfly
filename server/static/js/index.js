@@ -8,7 +8,6 @@ terminalMargin = 2;
 //sets the terminal text color and font-size
 function textStyle(message) {
     return "[[;#90b1e5;black]" + message + "]";
-    //return message;
 }
 
 //handle terminal text zoom in/out on hotkey commands
@@ -79,32 +78,6 @@ $(function () {
     });
 });
 
-//launch payload
-$(function () {
-    $("#send_payload").click(function (e) {
-
-        //no bot selected
-        if ($.cookie("bot") == null) {
-            terminal.error("No bot selected");
-            return;
-        }
-
-        var value = $('#payload').val();
-        if (value != 'Select payload..') {
-            $.ajax({
-                type: "POST",
-                url: "/payload",
-                data: {
-                    payload: value
-                },
-                success: function (data) {
-                    console.log(data)
-                }
-            });
-        }
-    });
-});
-
 
 /******************************************
  Payload dictionary functions begins here *
@@ -131,33 +104,55 @@ function populateDictionary(data, search) {
             var description = payloadData['description']
             var name = payloadData['name']
             var variables = payloadData['vars']
-            var parsedName = /[^/]*$/.exec(name)[0].split(" ")[0] + getRandomArbitrary(0, 10000);
+            var nameID = /[^/]*$/.exec(name)[0].split(" ")[0] + getRandomArbitrary(0, 10000);
 
-            console.log(name)
-            console.log(search)
             if (search == null || (name != null && name.toLowerCase().includes(search.toLowerCase()))) { //|| (description != null && description.toLowerCase().includes(search.toLowerCase()))) {
 
                 var variablesList = $('<ul class="list-unstyled"></ul>')
+                var varibaleInputList = $(' <div class="variable-inputs"></div>')
 
+                var hasVariables = false;
                 for (var variable in variables) {
                     if (variables.hasOwnProperty(variable)) {
+                        var variableID = variable + getRandomArbitrary(0, 10000);
+
+                        hasVariables = true
+
+                        //append variable description
                         var variableItem = $('<li><div><inline><h5>' + variable + ': <span>' + variables[variable] + '</span></h5></inline></div></li>');
                         variableItem.appendTo(variablesList);
+
+                        //append variable input box
+                        var varibaleInput = $('<div class="variable-inputs"><div class="input-group-sm margin-bottom"><input type="text" id="' + variableID + '" class="form-control" placeholder="' + variable + '"></div>')
+                        varibaleInputList.append(varibaleInput);
                     }
                 }
-
-                variablesList.prepend('<h4>Parameters: </h4>')
+                if (hasVariables) {
+                    variablesList.prepend('<h4>Parameters: </h4>')
+                }
 
                 var panelBodyDiv = $('<div class="panel-body"> </div>')
                 var panelBodyContent = $('</div><div><h4>Description: </h4><p>' + description + '</p>')
 
                 panelBodyDiv.append(variablesList)
-                panelBodyDiv.append(panelBodyContent)
 
-                var collapse = $(' <div id="collapse-' + parsedName + '" class="panel-collapse collapse"></div>')
+                if (description != '') {
+                    panelBodyDiv.append(panelBodyContent)
+                }
+
+                var inputRow = $('<div></div>')
+                var launchButton = $('<div><button name="' + name + '" type="button" class="btn btn-danger btn-block send-payload">Launch Payload</button></div>')
+
+                inputRow.append(varibaleInputList)
+                inputRow.append(launchButton)
+
+                panelBodyDiv.append(inputRow)
+
+                var collapse = $(' <div id="collapse-' + nameID + '" class="panel-collapse collapse"></div>')
                 collapse.append(panelBodyDiv)
 
-                var collapseOuter = $(' <div class="panel panel-default"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#collapse-' + parsedName + '">' + name + '</a></h4></div></div>')
+
+                var collapseOuter = $(' <div class="panel panel-default"><div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse" data-parent="#accordion" href="#collapse-' + nameID + '">' + name + '</a></h4></div></div>')
                 collapseOuter.append(collapse)
 
                 payloadManager.append(collapseOuter)
@@ -166,7 +161,7 @@ function populateDictionary(data, search) {
     }
 }
 
-function saveData(data){
+function saveData(data) {
     payloadsList = data;
 }
 
@@ -184,14 +179,50 @@ function generateSearchBar() {
     });
 
 }
+
+
+//launch payload
+function sendPayload() {
+    $("button.send-payload").click(function (e) {
+
+        //no bot selected
+        if ($.cookie("bot") == null) {
+            terminal.error("No bot selected");
+            return;
+        }
+
+        name = $(this).attr('name')
+        postData = {"payload": name}
+
+        $(this).parent().find("input").each(function () {
+            postData[$(this).attr('placeholder')] = $(this).val()
+
+        });
+
+        $.ajax({
+            type: "POST",
+            url: "/payload",
+            data: postData,
+            success: function (data) {
+                console.log(data)
+            }
+        });
+
+    });
+}
+
 getPayloads()
 generateSearchBar()
 
 /******************************************
- On Document ready            *
+ On Document ready                        *
  ******************************************/
 
 $(document).ready(function () {
+    //sloppy fix, should fix
+    setTimeout(function () {
+        sendPayload()
+    }, 500);
     $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}</style>');
     $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin + 'px;}</style>');
 });

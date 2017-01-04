@@ -1,3 +1,8 @@
+'''
+NAME: Webcam Picture
+DESCRIPTION: Takes webcam image and saves image to bot's /tmp folder with a date-time stamp
+'''
+
 import os
 import subprocess
 import datetime

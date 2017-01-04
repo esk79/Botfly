@@ -28,18 +28,18 @@
                     <ul class="dropdown-menu rcorners">
                         <div class="container downloads font-large"
                              style="width:400px; margin-left: 0px;margin-right: 0px;">
-{#                            <div class="row vertical-align row-margin">#}
-{#                                <span class="col-md-5">Example.txt</span>#}
-{#                                <div class="progress col-md-5">#}
-{#                                    <div class="progress-bar progress-bar-striped active"#}
-{#                                         role="progressbar"#}
-{#                                         aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"#}
-{#                                         style="width: 45%">#}
-{#                                        <span class="sr-only">45% Complete</span>#}
-{#                                    </div>#}
-{#                                </div>#}
-{#                                <a class="col-md-2"><span class="glyphicon glyphicon-remove pull-right"></span></a>#}
-{#                            </div>#}
+                            {#                            <div class="row vertical-align row-margin">#}
+                            {#                                <span class="col-md-5">Example.txt</span>#}
+                            {#                                <div class="progress col-md-5">#}
+                            {#                                    <div class="progress-bar progress-bar-striped active"#}
+                            {#                                         role="progressbar"#}
+                            {#                                         aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"#}
+                            {#                                         style="width: 45%">#}
+                            {#                                        <span class="sr-only">45% Complete</span>#}
+                            {#                                    </div>#}
+                            {#                                </div>#}
+                            {#                                <a class="col-md-2"><span class="glyphicon glyphicon-remove pull-right"></span></a>#}
+                            {#                            </div>#}
 
                             {#                            <div class="divider"></div>#}
                         </div>
@@ -58,7 +58,9 @@
                 </li>
             </ul>
             <ul class="nav navbar-nav navbar-right">
-                <li><a>Connected: {{ connected }}</a></li>
+                {% if connected %}
+                    <li><a>Connected: {{ connected }}</a></li>
+                {% endif %}
             </ul>
             <!--end navbar-right -->
         </div>
@@ -67,3 +69,29 @@
 
 </nav>
 <!--end container -->
+
+
+<div id="collapse-Say406" class="panel-collapse collapse" aria-expanded="false">
+     <div class="panel-body">
+        <ul class="list-unstyled"><h4>Parameters: </h4>
+            <li>
+                <div>
+                    <inline><h5>TEXT: <span>The text to be said by the victim machine</span></h5></inline>
+                </div>
+            </li>
+        </ul>
+        <div><h4>Description: </h4>
+            <p>Send a say command to the victim with the provided text</p></div>
+        <div class="row">
+            <div class="variable-inputs">
+                <div class="variable-inputs">
+                    <div class="input-group-sm margin-bottom"><input type="text" id="TEXT8642" class="form-control"
+                                                                     placeholder="TEXT"></div>
+                </div>
+            </div>
+            <div>
+                <button name="Say" type="button" class="btn btn-danger btn-block send-payload">Launch Payload</button>
+            </div>
+        </div>
+    </div>
+</div>
