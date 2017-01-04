@@ -16,7 +16,7 @@ try:
 except:
     from io import StringIO
 
-__version__ = "0.9"
+__version__ = "0.9.1"
 
 HOST = 'localhost'
 PORT = 1708
@@ -87,6 +87,10 @@ class FormatSocket:
 
         while len(msg_data) < expected_size:
             sock_data = self.sock.recv(FormatSocket.RECV_SIZE)
+
+            if not sock_data:
+                raise Exception("Connection Severed")
+
             total_data += sock_data
             if expected_size == sys.maxsize and len(total_data) > FormatSocket.SIZE_BYTES:
                 size_data = total_data[:FormatSocket.SIZE_BYTES]
@@ -264,7 +268,7 @@ def main():
                 raise e
         if RUNNING:
             # Try again in a minute
-            time.sleep(60)
+            time.sleep(10)
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
@@ -300,7 +304,6 @@ def serve(sock):
         while RUNNING:
             recvbytes = sock.recv()
             recvjson = json.loads(recvbytes.decode('UTF-8'))
-
             # Special LS command
             if LS_JSON in recvjson:
                 filedict = {}
