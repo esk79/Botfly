@@ -72,13 +72,13 @@ function updateProgressBar(filename, percent) {
 function addInProgress(filename, percent, path) {
     filenameParsed = filename.split('.')[0];
     var downloadManager = $('div.downloads')
-    downloadManager.prepend('<div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="progress col-md-6"> <div class="progress-bar progress-bar-striped active progress-' + filenameParsed + '"role="progressbar"aria-valuenow="' + percent + '" aria-valuemin="0" aria-valuemax="100"style="width:' + percent + '%"></div> </div>  <a onclick="deleteFile(\'' + path +' \')" class="col-md-2"><span class="glyphicon glyphicon-remove pull-right"></span></a></div>')
+    downloadManager.prepend('<div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="progress col-md-6"> <div class="progress-bar progress-bar-striped active progress-' + filenameParsed + '"role="progressbar"aria-valuenow="' + percent + '" aria-valuemin="0" aria-valuemax="100"style="width:' + percent + '%"></div> </div>  <a onclick="deleteFile(\'' + path + ' \')" class="col-md-2"><span class="glyphicon glyphicon-remove pull-right"></span></a></div>')
 }
 
 function addCompleted(filename, path) {
     filenameParsed = filename.split('.')[0];
     var downloadManager = $('div.downloads')
-    downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-8"> <a href="/downloader?file=' + path + '" download="' + filename + '" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></a> </div>  <a onclick="deleteFile(\'' + path +' \')" class="col-md-1"><span class="glyphicon glyphicon-remove pull-right" style="color: #a4a7ac"></span></a></div>')
+    downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-8"> <a href="/downloader?file=' + path + '" download="' + filename + '" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></a> </div>  <a onclick="deleteFile(\'' + path + ' \')" class="col-md-1"><span class="glyphicon glyphicon-remove pull-right" style="color: #a4a7ac"></span></a></div>')
 }
 
 function populateDownloadsDropdown(data) {
@@ -117,7 +117,7 @@ function getDownloading() {
 function deleteFile(file) {
     $.ajax({
         type: "DELETE",
-        url: "/downloader?file="+file,
+        url: "/downloader?file=" + file,
         success: function (data) {
             console.log(data)
         }

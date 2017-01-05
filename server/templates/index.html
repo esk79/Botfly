@@ -25,37 +25,6 @@
 
                     <div class="row payload-desc">
                         <div class="panel-group payloads" id="accordion">
-                            <div class="panel panel-default">
-                                <div class="panel-heading"><h4 class="panel-title"><a data-toggle="collapse"
-                                                                                      data-parent="#accordion"
-                                                                                      href="#collapse-password_popup_osx6038">osx/password_popup_osx</a>
-                                </h4></div>
-                                <div id="collapse-password_popup_osx6038" class="panel-collapse collapse">
-                                    <div class="panel-body">
-                                        <div class="row">
-                                            <ul class="list-unstyled"><h4>Parameters: </h4></ul>
-                                            <div><h4>Description: </h4>
-                                                <p></p></div>
-                                        </div>
-                                        <div class="row">
-                                            <div class="variable-inputs">
-                                                <div class="input-group-sm margin-bottom">
-                                                    <input type="text"
-                                                           class="form-control"
-                                                           placeholder="LHOST">
-                                                </div>
-                                                <div class="input-group-sm margin-bottom">
-                                                    <input type="text" class="form-control" id="basic-url"
-                                                           aria-describedby="basic-addon3" placeholder="RHOST">
-                                                </div>
-                                            </div>
-                                            <button type="button" class="btn btn-danger btn-block"
-                                                    onlick="launchPayload()">Launch Payload
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -98,8 +67,8 @@
         },
         onClear: function (terminal) {
             $.get("/clear", function (data) {
-            console.log(data)
-        })
+                console.log(data)
+            })
         },
     });
 

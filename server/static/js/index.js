@@ -247,3 +247,5 @@ $(document).ready(function () {
         }
     });
 });
+
+//TODO: Evan fix unnecessary calls to /downloader
