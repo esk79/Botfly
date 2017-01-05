@@ -58,8 +58,8 @@ class BotNetPayloadManager:
         vartext = ""
         for reqvar in vars.keys():
             if reqvar in args:
-                arg = json.dumps(args[reqvar])[1:-1]
-                vartext += '{}="{}"\n'.format(reqvar,arg)
+                arg = json.dumps(args[reqvar])
+                vartext += '{}={}\n'.format(reqvar,arg)
             else:
                 return None
         with open(self.payloadfiles[payload],"r") as f:
