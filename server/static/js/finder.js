@@ -58,7 +58,7 @@ function generateFileFolderIcons(response, search) {
             var name = escapeHTML(f.name),
                 icon = '<span class="icon folder"></span>';
             //add ability to download: <span onclick="downloadFile(\''  + f.path + '\')" class="details glyphicon glyphicon-download"></span>
-            var folder = $('<li class="folders"><a onclick="getLS(\'' + f.path + '\')" title="' + f.path + '" class="folders">' + icon + '<span class="name">' + name + '</span></a></li>');
+            var folder = $('<li class="folders"><a onclick="folderClick(\'' + f.path + '\')" title="' + f.path + '" class="folders">' + icon + '<span class="name">' + name + '</span></a></li>');
             folder.appendTo(fileList);
         });
 
@@ -100,7 +100,7 @@ function generateBreadcrumbsIcon(response) {
 
 
         if (i !== breadcrumbsUrls.length - 1) {
-            url += '<a onclick="getLS(\'' + path + '\')"><span class="bread folderName">' + name[name.length - 1] + '</span></a> <span class="arrow">→</span> ';
+            url += '<a onclick="folderClick(\'' + path + '\')"><span class="bread folderName">' + name[name.length - 1] + '</span></a> <span class="arrow">→</span> ';
         }
         else {
             url += '<span class="folderName">' + name[name.length - 1] + '</span>';
@@ -138,9 +138,13 @@ function generateSearchBar(response) {
 
 }
 
+function folderClick(folder) {
+    $('input.file-search').val('');
+    getLS(folder);
+}
+
 //render finder with server response
 function renderFinder(response) {
-    var value = $('.div.search.input-group')
     generateFileFolderIcons(response);
     generateBreadcrumbsIcon(response);
     generateSearchBar(response);
@@ -218,6 +222,7 @@ $(document).ready(function () {
                 not_received = false;
                 if (msg.special.hasOwnProperty('ls')) {
                     $('.filemanager .search').show();
+                    $('input.file-search').focus()
                     var response = JSON.parse(msg.special['ls']);
                     renderFinder(response);
                 }
@@ -233,3 +238,4 @@ $(document).ready(function () {
         setTimeout(receive_loop, 100);
     }
 });
+

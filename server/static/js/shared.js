@@ -26,7 +26,7 @@ $(function () {
 
 //new connection received
 socket.on('connection', function (msg) {
-    $('.col-md-3').append('<p class="conn-' + msg.user + '">' + 'New connection from: ' + msg.user + '</p>');
+    $('li.notifications').append('<a class="conn-' + msg.user + '">' + 'New connection from: ' + msg.user + '</a>');
     $('.conn-' + msg.user).fadeOut(5000);
     $("#bot").append('<option value="' + msg.user + '">' + msg.user + '</option>')
 });
@@ -34,7 +34,7 @@ socket.on('connection', function (msg) {
 //TODO: consolidate
 //repetitive code: will remove later
 socket.on('disconnect', function (msg) {
-    $('.col-md-3').append('<p class="disconn-' + msg.user + '">' + 'Lost connection to: ' + msg.user + '</p>');
+    $('li.notifications').append('<a class="disconn-' + msg.user + '">' + 'Lost connection to: ' + msg.user + '</a>');
     $('.disconn-' + msg.user).fadeOut(5000);
     $("#bot option[value='" + msg.user + "']").remove();
     if ($('#bot > option').length == 1 || $("#bot").val() == msg.user) {

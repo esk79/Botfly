@@ -132,8 +132,8 @@
 -------------------------*/
 
 .payload-desc {
-    height: 650px;
-    max-height: 650px;
+    height: 665px;
+    max-height: 665px;
     overflow-y: scroll;
     margin-top: 20px;
 }
