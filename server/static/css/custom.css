@@ -142,10 +142,6 @@
     margin-bottom: 5px;
 }
 
-.input-group-sm > .form-control, .input-group-sm > .input-group-addon, .input-group-sm > .input-group-btn > .btn {
-    padding: 0px 20px;
-}
-
 .panel-heading {
     word-break: break-all
 }
