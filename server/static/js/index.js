@@ -225,6 +225,15 @@ generateSearchBar()
  ******************************************/
 
 $(document).ready(function () {
+    $('#terminal').height(function () {
+        return $(window).height() * 0.9;
+    });
+
+    //find better way to do this, anchor to other col if possible
+    $('.payload-desc').height(function () {
+        return $(window).height() * 0.77;
+    });
+
     //sloppy fix, should fix
     setTimeout(function () {
         sendPayload()
