@@ -9,7 +9,7 @@ import subprocess
 import datetime
 
 check_volume = 'set ovol to output volume of (get volume settings)\nreturn ovol'
-set_volume = "osascript -e 'set volume {}'"
+set_volume = "osascript -e 'set volume output volume {}'"
 
 proc = subprocess.Popen(['osascript', '-'],
                         stdin=subprocess.PIPE,
