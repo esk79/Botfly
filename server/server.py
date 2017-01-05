@@ -99,6 +99,15 @@ def kill_proc():
         return json.dumps({"success": True})
     return json.dumps({"success": False})
 
+@app.route('/clear', methods=['POST','GET'])
+@login_required
+def clearLog():
+    if 'bot' in request.cookies:
+        print("clearing")
+        botnet.clearLog(request.cookies.get('bot'))
+        return json.dumps({"success": True})
+    return json.dumps({"success": False})
+
 @app.route('/uploader', methods=['POST'])
 @login_required
 def upload_file():
@@ -109,7 +118,6 @@ def upload_file():
         return json.dumps({"success": True})
     return json.dumps({"success": False})
     # TODO switch to in-progress instead of "success"
-
 
 
 @app.route('/downloader', methods=['GET','POST','DELETE'])

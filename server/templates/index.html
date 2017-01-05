@@ -80,10 +80,6 @@
             terminal.error('No bot selected.');
             return;
         }
-        if (command == 'clear') {
-            term.clear();
-        }
-
         //send terminal command to server
         socket.emit('send_command', {data: command});
         socket.removeAllListeners('send_command'); //Sloppy, fix this if can. should be outside terminal function ideally
@@ -99,7 +95,12 @@
         tabcompletion: true,
         completion: function (terminal, command, callback) {
             callback(commonCommands.concat(lastOut));
-        }
+        },
+        onClear: function (terminal) {
+            $.get("/clear", function (data) {
+            console.log(data)
+        })
+        },
     });
 
 

@@ -155,6 +155,12 @@ class BotNet(Thread):
                         log.append(entry)
             return log
 
+    def clearLog(self, user):
+         with self.connlock:
+             if user in self.logs:
+                 self.logs[user].log = []
+
+
     def sendKillProc(self, user):
         with self.connlock:
             if user in self.allConnections:

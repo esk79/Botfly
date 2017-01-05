@@ -56,7 +56,6 @@ function getCookie(name) {
 function updateDownloadsNumber(data) {
     var num = data.length;
     if (parseInt($('span.num-downloads.badge').html(), 10) != num) {
-        console.log("here")
         $('span.num-downloads.badge').html(num)
     }
 }

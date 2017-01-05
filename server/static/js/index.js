@@ -33,7 +33,6 @@ hotkeys('command+=, command+-', function (event, handler) {
 socket.on('response', function (msg) {
     //error returned from bot
     if (msg.user === getCookie('bot')) {
-        console.log(msg);
         if (msg.printout != '') {
             terminal.echo(printOutStyle(msg.printout));
         }
