@@ -114,20 +114,23 @@ function populateDictionary(data, search) {
                 var variablesList = $('<ul class="list-unstyled"></ul>')
                 var varibaleInputList = $(' <div class="variable-inputs"></div>')
 
+                //this naming got so out of hand...
                 var hasVariables = false;
                 for (var variable in variables) {
                     if (variables.hasOwnProperty(variable)) {
                         var variableID = variable + getRandomArbitrary(0, 10000);
+                        var variableDict = variables[variable]
 
                         hasVariables = true
 
                         //append variable description
-                        var variableItem = $('<li><div><inline><h5>' + variable + ': <span>' + variables[variable] + '</span></h5></inline></div></li>');
+                        var variableItem = $('<li><div><inline><h5>' + variable + ': <span>' + variableDict['description'] + '</span></h5></inline></div></li>');
                         variableItem.appendTo(variablesList);
 
                         //append variable input box
                         var varibaleInput = $('<div class="variable-inputs"><div class="input-group-sm margin-bottom"><input type="text" id="' + variableID + '" class="form-control" placeholder="' + variable + '"></div>')
                         varibaleInputList.append(varibaleInput);
+
                     }
                 }
                 if (hasVariables) {
