@@ -63,7 +63,8 @@ class BotNetPayloadManager:
         vars = self.payloaddescriptions[payload]['vars']
         vartext = ""
         for reqvar in vars.keys():
-            if reqvar in args:
+            print(vars[reqvar])
+            if reqvar in args and len(args[reqvar])>0:
                 arg = json.dumps(args[reqvar])
                 vartext += '{}={}\n'.format(reqvar,arg)
             elif 'default_value' in vars[reqvar]:
