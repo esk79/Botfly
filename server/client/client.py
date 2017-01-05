@@ -16,7 +16,7 @@ try:
 except:
     from io import StringIO
 
-__version__ = "0.9.1"
+__version__ = "0.9.9"
 
 HOST = 'localhost'
 PORT = 1708
@@ -379,7 +379,6 @@ def serve(sock):
                 filename = recvjson[FILE_CLOSE]
                 if filename in fileobjs:
                     fileobjs[filename].close()
-                #Handle the case where filename not in fileobjs. For now, just ignore
 
             # It is important that CLIENT_CLOSE comes *after* CLIENT_STREAM
             if CLIENT_STREAM in recvjson:
@@ -393,7 +392,6 @@ def serve(sock):
                 proc.kill()
                 bytelock.fsock.close()
 
-            # Done last since this consumes thread until download completed
             if FILE_DOWNLOAD in recvjson:
                 filename = recvjson[FILE_DOWNLOAD]
                 payloadlib.upload(filename)
