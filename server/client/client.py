@@ -298,8 +298,8 @@ def serve(sock):
 
     bytelock = ByteLockBundler(sock)
     payloadlib = PayloadLib(bytelock)
-    #sys.stdout = WriterWrapper(lambda s: bytelock.writePrintbytes(s.encode('UTF-8')))
-    #sys.stderr = WriterWrapper(lambda s: bytelock.writeErrbytes(s.encode('UTF-8')))
+    sys.stdout = WriterWrapper(lambda s: bytelock.writePrintbytes(s.encode('UTF-8')))
+    sys.stderr = WriterWrapper(lambda s: bytelock.writeErrbytes(s.encode('UTF-8')))
 
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
