@@ -107,7 +107,7 @@ function populateDictionary(data, search) {
             var variables = payloadData['vars']
             var nameID = /[^/]*$/.exec(name)[0].split(" ")[0] + getRandomArbitrary(0, 10000);
 
-            if (search == null || (name != null && name.toLowerCase().includes(search.toLowerCase()))) { //|| (description != null && description.toLowerCase().includes(search.toLowerCase()))) {
+            if (search == null || (name != null && name.toLowerCase().includes(search.toLowerCase())) || (description != null && description.toLowerCase().includes(search.toLowerCase()))) {
 
                 var variablesList = $('<ul class="list-unstyled"></ul>')
                 var varibaleInputList = $(' <div class="variable-inputs"></div>')
@@ -129,11 +129,11 @@ function populateDictionary(data, search) {
                     }
                 }
                 if (hasVariables) {
-                    variablesList.prepend('<h4>Parameters: </h4>')
+                    variablesList.prepend('<h4>Parameters </h4>')
                 }
 
                 var panelBodyDiv = $('<div class="panel-body"> </div>')
-                var panelBodyContent = $('</div><div><h4>Description: </h4><p>' + description + '</p>')
+                var panelBodyContent = $('</div><div><h4>Description </h4><p>' + description + '</p>')
 
                 panelBodyDiv.append(variablesList)
 
@@ -142,7 +142,7 @@ function populateDictionary(data, search) {
                 }
 
                 var inputRow = $('<div></div>')
-                var launchButton = $('<div><button name="' + name + '" type="button" class="btn btn-danger btn-block send-payload">Launch Payload</button></div>')
+                var launchButton = $('<button name="' + name + '" type="button" class="btn btn-danger btn-block send-payload">Launch Payload</button>')
 
                 inputRow.append(varibaleInputList)
                 inputRow.append(launchButton)
