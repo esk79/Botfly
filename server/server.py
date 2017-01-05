@@ -158,6 +158,7 @@ def download_file():
             else:
                 user = request.cookies.get('bot')
             filename = request.args.get('file')
+
             if botnet.deleteFile(user,filename):
                 return "done"
             else:
