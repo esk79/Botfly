@@ -44,6 +44,7 @@ socket.on('response', function (msg) {
             terminal.error(msg.stderr);
         }
         if (msg.stdout != "Server generated event" && msg.stdout != '') {
+            lastOut = msg.stdout.split("\n");
             terminal.echo(stdoutStyle(msg.stdout));
         }
     }

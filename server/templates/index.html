@@ -72,6 +72,7 @@
 </div>
 <!-- /.container -->
 <script>
+    lastOut = []
 
     terminal = $('#terminal').terminal(function (command, term) {
         //no bot selected
@@ -94,7 +95,11 @@
         prompt: function (callback) {
             callback('{{connected}}> ');
         },
-        convertLinks: false
+        convertLinks: false,
+        tabcompletion: true,
+        completion: function (terminal, command, callback) {
+            callback(commonCommands.concat(lastOut));
+        }
     });
 
 
