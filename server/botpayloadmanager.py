@@ -34,8 +34,7 @@ class BotNetPayloadManager:
         try:
             if payloadlines[0].strip() in BotNetPayloadManager.COMMENT_DELIMIT:
                 for i in range(1,len(payloadlines)):
-                    payloadline = payloadlines[i]
-
+                    payloadline = payloadlines[i].strip()
                     if payloadline in BotNetPayloadManager.COMMENT_DELIMIT:
                         break
                     elif ':' in payloadline:
@@ -43,7 +42,14 @@ class BotNetPayloadManager:
                         lhs, rhs = payloadline[:indx].strip(), payloadline[indx+1:].strip()
                         if lhs.startswith(BotNetPayloadManager.VAR_DENOTE):
                             var = lhs[len(BotNetPayloadManager.VAR_DENOTE):].strip()
-                            payloaddict['vars'][var] = rhs
+                            defval = None
+                            if '=' in var:
+                                eqindx = var.index('=')
+                                defval = var[eqindx+1:].strip()
+                                var = var[:eqindx].strip()
+                            payloaddict['vars'][var] = {'description':rhs}
+                            if defval is not None:
+                                payloaddict['vars'][var]['default_value'] = defval
                         else:
                             payloaddict[lhs.lower()] = rhs
         except Exception as e:
@@ -60,8 +66,9 @@ class BotNetPayloadManager:
             if reqvar in args:
                 arg = json.dumps(args[reqvar])
                 vartext += '{}={}\n'.format(reqvar,arg)
-            else:
-                return None
+            elif 'default_value' in vars[reqvar]:
+                arg = json.dumps(vars[reqvar]['default_value'])
+                vartext += '{}={}\n'.format(reqvar, arg)
         with open(self.payloadfiles[payload],"r") as f:
             payloadtext = f.read()
             return vartext+payloadtext

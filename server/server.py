@@ -162,7 +162,6 @@ def download_file():
 @app.route('/payload', methods=['GET', 'POST'])
 @login_required
 def payload_launch():
-    payload_name = "example_payload"
     if request.method == 'POST' and 'payload' in request.form:
         payload_name = request.form.get('payload')
         if 'bot' in request.cookies:
