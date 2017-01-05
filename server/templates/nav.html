@@ -13,11 +13,14 @@
         </div>
 
         <!-- Collect the nav links, forms, and other content for toggling -->
-        <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+        <li class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
                 <li><a href="{{ url_for('finder') }}">Finder</a></li>
             </ul>
-
+            <ul class="nav navbar-nav">
+                <li class="notifications">
+                </li>
+            </ul>
 
             <ul class="nav navbar-nav navbar-right">
                 <li class="dropdown">
@@ -63,8 +66,8 @@
                 {% endif %}
             </ul>
             <!--end navbar-right -->
-        </div>
-        <!-- /.navbar-collapse -->
+    </div>
+    <!-- /.navbar-collapse -->
     </div>
 
 </nav>
@@ -72,7 +75,7 @@
 
 
 <div id="collapse-Say406" class="panel-collapse collapse" aria-expanded="false">
-     <div class="panel-body">
+    <div class="panel-body">
         <ul class="list-unstyled"><h4>Parameters: </h4>
             <li>
                 <div>
