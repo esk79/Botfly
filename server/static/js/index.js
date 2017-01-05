@@ -127,14 +127,13 @@ function populateDictionary(data, search) {
                         var variableItem = $('<li><div><inline><h5>' + variable + ': <span>' + variableDict['description'] + '</span></h5></inline></div></li>');
                         variableItem.appendTo(variablesList);
 
-                        required = false;
-                        if ('default_value' in variableDict) {
-                            required = true;
+                        required = '';
+                        if (!('default_value' in variableDict)) {
+                            required = 'required';
                         }
 
-
                         //append variable input box
-                        var varibaleInput = $('<div class="variable-inputs"><div class="input-group-sm margin-bottom"><input required="' + required + '" type="text" id="' + variableID + '" class="form-control" placeholder="' + variable + '"></div>')
+                        var varibaleInput = $('<div class="variable-inputs"><div class="input-group-sm margin-bottom"><input type="text" id="' + variableID + '" class="form-control ' + required + '" placeholder="' + variable + '"></div>')
                         varibaleInputList.append(varibaleInput);
 
                     }
@@ -213,7 +212,7 @@ function sendPayload() {
 
         $(this).parent().find("input").each(function () {
             postData[$(this).attr('placeholder')] = $(this).val()
-            if ($(this).attr('required') && $(this).val() == '') {
+            if ($(this).hasClass('required') && $(this).val() == '') {
                 error = true;
             }
         });
