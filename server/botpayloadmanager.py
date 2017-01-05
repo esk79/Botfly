@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 
 class BotNetPayloadManager:
     PAYLOAD_EXT = '.py'
@@ -57,7 +58,8 @@ class BotNetPayloadManager:
         vartext = ""
         for reqvar in vars.keys():
             if reqvar in args:
-                vartext += '{}="{}"\n'.format(reqvar,args[reqvar])
+                arg = json.dumps(args[reqvar])[1:-1]
+                vartext += '{}="{}"\n'.format(reqvar,arg)
             else:
                 return None
         with open(self.payloadfiles[payload],"r") as f:
