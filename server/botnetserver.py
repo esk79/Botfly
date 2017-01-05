@@ -1,6 +1,7 @@
 from threading import Thread
 from distutils.version import LooseVersion
 import json
+import os
 
 try:
     from server import formatsock, server
@@ -27,6 +28,7 @@ class BotServer(Thread):
             self.tcpsock.listen(5)
             (clientsock, (ip, port)) = self.tcpsock.accept()
             clientformatsock = formatsock.FormatSocket(clientsock)
+            print("[*] Accepting connection")
             msgbytes = clientformatsock.recv()
             host_info = json.loads(msgbytes.decode('UTF-8'))
 
