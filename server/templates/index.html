@@ -18,7 +18,7 @@
             </ul>
             <ul>
                 <div class="well">
-                    <div class="row">
+                    <div class="row error">
                         <input type="search" class="search-query form-control search-payload"
                                placeholder="Search payloads..."/>
                     </div>
@@ -54,8 +54,8 @@
         socket.removeAllListeners('send_command'); //Sloppy, fix this if can. should be outside terminal function ideally
     }, {
         greetings: 'Botfly Terminal',
-{#        height: 800,#}
-{#        width: 800,#}
+        {#        height: 800,#}
+        {#        width: 800,#}
         //update prompt to be name of current user
         prompt: function (callback) {
             callback('{{connected}}> ');

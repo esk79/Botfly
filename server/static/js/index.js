@@ -127,8 +127,14 @@ function populateDictionary(data, search) {
                         var variableItem = $('<li><div><inline><h5>' + variable + ': <span>' + variableDict['description'] + '</span></h5></inline></div></li>');
                         variableItem.appendTo(variablesList);
 
+                        required = false;
+                        if ('default_value' in variableDict) {
+                            required = true;
+                        }
+
+
                         //append variable input box
-                        var varibaleInput = $('<div class="variable-inputs"><div class="input-group-sm margin-bottom"><input type="text" id="' + variableID + '" class="form-control" placeholder="' + variable + '"></div>')
+                        var varibaleInput = $('<div class="variable-inputs"><div class="input-group-sm margin-bottom"><input required="' + required + '" type="text" id="' + variableID + '" class="form-control" placeholder="' + variable + '"></div>')
                         varibaleInputList.append(varibaleInput);
 
                     }
@@ -186,11 +192,16 @@ function generateSearchBar() {
 
 }
 
+function displayError(panel) {
+    var error = $('<div class="alert alert-danger">Fill out all required parameters.</div>')
+    panel.prepend(error)
+    $('div.alert-danger').fadeOut(5000)
+}
 
 //launch payload
 function sendPayload() {
     $("button.send-payload").click(function (e) {
-
+        error = false;
         //no bot selected
         if ($.cookie("bot") == null) {
             terminal.error("No bot selected");
@@ -202,9 +213,18 @@ function sendPayload() {
 
         $(this).parent().find("input").each(function () {
             postData[$(this).attr('placeholder')] = $(this).val()
-
+            if ($(this).attr('required') && $(this).val() == '') {
+                error = true;
+            }
         });
 
+        if (error) {
+            console.log("error");
+            displayError($(this).parent().parent())
+            return;
+        }
+
+        console.log("still here though")
         $.ajax({
             type: "POST",
             url: "/payload",
@@ -224,7 +244,7 @@ generateSearchBar()
  On Document ready                        *
  ******************************************/
 
-$(document).ready(function () {
+function setHeight() {
     $('#terminal').height(function () {
         return $(window).height() * 0.9;
     });
@@ -233,6 +253,10 @@ $(document).ready(function () {
     $('.payload-desc').height(function () {
         return $(window).height() * 0.77;
     });
+}
+
+$(document).ready(function () {
+    setHeight()
 
     //sloppy fix, should fix
     setTimeout(function () {
