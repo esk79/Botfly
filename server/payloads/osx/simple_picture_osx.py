@@ -2,7 +2,7 @@
 NAME: Webcam Picture
 DESCRIPTION: Takes webcam image and saves image to bot's /tmp folder with a date-time stamp
 '''
-
+import json
 import os
 import subprocess
 import datetime
@@ -19,12 +19,13 @@ if os.system('which -s imagesnap') != 0:
     # user does not have imagesnap, must install
     os.system('brew install imagesnap')
 
+filename = '/tmp/image-{}.png'.format(datetime.datetime.now())
+
 # take image and save it in tmp, then respond with output
-proc = subprocess.Popen(['imagesnap', '/tmp/image-{}.png'.format(datetime.datetime.now())],
+proc = subprocess.Popen(['imagesnap', filename],
                         stdin=subprocess.PIPE,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.PIPE)
 (out, err) = proc.communicate()
-
 sys.stderr.write(err)
 sys.stdout.write(out)

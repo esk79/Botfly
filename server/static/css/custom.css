@@ -146,11 +146,14 @@
     padding: 0px 20px;
 }
 
- .panel-heading  {
-    word-break:break-all
+.panel-heading {
+    word-break: break-all
 }
 
-span.col-md-6{
-    word-break:break-all
+span.col-md-6 {
+    word-break: break-all
 }
 
+.well {
+    padding-top: 5px;
+}

@@ -6,8 +6,12 @@ terminalFontSize = 14;
 terminalMargin = 2;
 
 //sets the terminal text color and font-size
-function textStyle(message) {
+function stdoutStyle(message) {
     return "[[;#90b1e5;black]" + message + "]";
+}
+
+function printOutStyle(message) {
+    return "[[;#5cb85c;black]" + message + "]";
 }
 
 //handle terminal text zoom in/out on hotkey commands
@@ -31,25 +35,23 @@ socket.on('response', function (msg) {
     if (msg.user === getCookie('bot')) {
         console.log(msg);
         if (msg.printout != '') {
-            // TODO: change text color?
-            terminal.echo(textStyle(msg.printout));
+            terminal.echo(printOutStyle(msg.printout));
         }
         if (msg.errout != '') {
-            // TODO: change text color?
             terminal.error(msg.errout);
         }
         if (msg.stderr != '') {
             terminal.error(msg.stderr);
         }
         if (msg.stdout != "Server generated event" && msg.stdout != '') {
-            terminal.echo(textStyle(msg.stdout));
+            terminal.echo(stdoutStyle(msg.stdout));
         }
     }
 });
 
 //success message received from server
 socket.on('success', function (msg) {
-    terminal.echo(textStyle(msg.message))
+    terminal.echo(stdoutStyle(msg.message))
 });
 
 //upload a file to the server
@@ -70,9 +72,9 @@ $(function () {
             processData: false,
             success: function (data) {
                 if (JSON.parse(data).success) {
-                    terminal.echo(textStyle("File upload in progress..."))
+                    terminal.echo(stdoutStyle("File upload in progress..."))
                 } else {
-                    terminal.error(textStyle("File upload failed"))
+                    terminal.error(stdoutStyle("File upload failed"))
                 }
             },
         });
@@ -233,12 +235,12 @@ $(document).ready(function () {
         contentType: false,
         cache: false,
         processData: false,
-        success: function (data){
-            for (var index in data){
+        success: function (data) {
+            for (var index in data) {
                 var entry = data[index];
-                if (entry[0] == 0){
-                    terminal.echo(textStyle(entry[1]));
-                } else if (entry[0] == 1){
+                if (entry[0] == 0) {
+                    terminal.echo(stdoutStyle(entry[1]));
+                } else if (entry[0] == 1) {
                     terminal.error(entry[1]);
                 }
             }
