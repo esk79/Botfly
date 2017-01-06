@@ -119,6 +119,7 @@ function deleteFile(file, user) {
         type: "DELETE",
         url: "/downloader?file=" + file + "&user=" + user + " ",
         success: function (data) {
+            getDownloading()
             console.log(data)
         }
     });
