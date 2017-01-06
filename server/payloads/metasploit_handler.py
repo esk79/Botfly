@@ -1,5 +1,5 @@
 '''
-NAME: Metasploit reverse tcp
+NAME: Metasploit Reverse TCP
 DESCRIPTION: Connects back to a server in a generic way for metasploit handlers
 VAR LHOST: Metasploit host ip
 VAR LPORT: Metasploit host port

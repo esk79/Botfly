@@ -205,7 +205,6 @@ function downloadFile(filename) {
             file: filename
         },
         success: function (data) {
-            increaseeDownloadsNumber()
             getDownloading()
         }
     });

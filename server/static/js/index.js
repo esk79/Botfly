@@ -51,6 +51,10 @@ socket.on('response', function (msg) {
 
 //success message received from server
 socket.on('success', function (msg) {
+    if (msg.type == 'download') {
+        increaseeDownloadsNumber()
+        getDownloading()
+    }
     terminal.echo(stdoutStyle(msg.message))
 });
 
@@ -149,7 +153,7 @@ function populateDictionary(data, search) {
                     panelBodyDiv.append(panelBodyContent)
                 }
 
-                 panelBodyDiv.append(variablesList)
+                panelBodyDiv.append(variablesList)
 
                 var inputRow = $('<div></div>')
                 var launchButton = $('<button name="' + name + '" type="button" class="btn btn-danger btn-block send-payload">Launch Payload</button>')

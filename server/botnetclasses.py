@@ -131,8 +131,11 @@ class BotNet(Thread):
                                                 'user': user},
                                                namespace="/bot")
                         if BotNet.FILESIZE_JSON in special:
+                            self.socketio.emit('success', {'user': user, 'message': "File download beginning", 'type': 'download'},
+                                   namespace='/bot')
                             fileinfo = json.loads(special[BotNet.FILESIZE_JSON])
                             self.filemanager.setFileSize(user,fileinfo['filename'],fileinfo['filesize'])
+
 
                     # Forward file bytes as needed
                     for filename in filestream.keys():
@@ -314,7 +317,7 @@ class Bot:
                     json_str = json.dumps({Bot.CLIENT_CLOSE: True})
                 self.sock.send(json_str)
                 fileobj.close()
-                self.socketio.emit('success', {'user': self.user, 'message': "File upload successful"},
+                self.socketio.emit('success', {'user': self.user, 'message': "File upload successful", 'type': 'upload'},
                                    namespace='/bot')
 
     def startFileDownload(self, filename):
