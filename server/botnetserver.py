@@ -35,6 +35,7 @@ class BotServer(Thread):
             user = host_info['user'].strip()
             botversion = LooseVersion(host_info['version'])
             bot = Bot(clientsock, host_info, self.socketio)
+
             if botversion < self.clientversion:
                 # Autoupdate
                 print("[*] Updating {} on version {}".format(user, botversion))

