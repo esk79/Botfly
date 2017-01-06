@@ -21,7 +21,6 @@ vol = out.decode('UTF-8')
 
 filename = '/tmp/screen-{}.png'.format(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M'))
 
-
 os.system(set_volume.format('0'))
 if os.system('screencapture '+filename) == 0:
     sys.stdout.write("Screenshot successful\n")
