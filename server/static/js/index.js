@@ -145,11 +145,11 @@ function populateDictionary(data, search) {
                 var panelBodyDiv = $('<div class="panel-body"> </div>')
                 var panelBodyContent = $('</div><div><h4>Description </h4><p>' + description + '</p>')
 
-                panelBodyDiv.append(variablesList)
-
                 if (description != '') {
                     panelBodyDiv.append(panelBodyContent)
                 }
+
+                 panelBodyDiv.append(variablesList)
 
                 var inputRow = $('<div></div>')
                 var launchButton = $('<button name="' + name + '" type="button" class="btn btn-danger btn-block send-payload">Launch Payload</button>')
