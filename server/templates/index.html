@@ -49,13 +49,17 @@
             terminal.error('No bot selected.');
             return;
         }
+        if (command == 'kill') {
+            $.get("/kill", function (response) {
+                console.log(response)
+            })
+        }
+
         //send terminal command to server
         socket.emit('send_command', {data: command});
         socket.removeAllListeners('send_command'); //Sloppy, fix this if can. should be outside terminal function ideally
     }, {
         greetings: 'Botfly Terminal',
-        {#        height: 800,#}
-        {#        width: 800,#}
         //update prompt to be name of current user
         prompt: function (callback) {
             callback('{{connected}}> ');
@@ -66,8 +70,8 @@
             callback(commonCommands.concat(lastOut));
         },
         onClear: function (terminal) {
-            $.get("/clear", function (data) {
-                console.log(data)
+            $.get("/clear", function (response) {
+                console.log(response)
             })
         },
     });
