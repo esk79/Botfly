@@ -60,8 +60,8 @@ function updateDownloadsNumber(data) {
     }
 }
 
-function decreaseDownloadsNumber() {
-    $('span.num-downloads.badge').html(parseInt($('span.num-downloads.badge').html(), 10) - 1)
+function increaseeDownloadsNumber() {
+    $('span.num-downloads.badge').html(parseInt($('span.num-downloads.badge').html(), 10) + 1)
 }
 
 function updateProgressBar(filename, percent) {
@@ -119,6 +119,7 @@ function deleteFile(file, user) {
         type: "DELETE",
         url: "/downloader?file=" + file + "&user=" + user + " ",
         success: function (data) {
+            getDownloading()
             console.log(data)
         }
     });
@@ -126,6 +127,15 @@ function deleteFile(file, user) {
 
 getDownloading()
 setInterval(function () {
-    getDownloading();
+    checkUpdateDownloads();
 }, 1000);
+
+function checkUpdateDownloads() {
+    if ($("li.dropdown").hasClass('open')) {
+        //dropdown is opened
+        setInterval(function () {
+            getDownloading();
+        }, 1000);
+    }
+}
 
