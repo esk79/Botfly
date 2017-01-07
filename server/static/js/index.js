@@ -240,7 +240,6 @@ function sendPayload() {
                 console.log(data)
             }
         });
-
     });
 }
 
