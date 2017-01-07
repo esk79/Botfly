@@ -14,22 +14,6 @@ function printOutStyle(message) {
     return "[[;#5cb85c;black]" + message + "]";
 }
 
-//handle terminal text zoom in/out on hotkey commands
-hotkeys('command+=, command+-', function (event, handler) {
-    switch (handler.key) {
-        case "command+=":
-            terminalMargin += .15;
-            terminalFontSize += .2;
-            break;
-        case "command+-":
-            terminalMargin -= .15;
-            terminalFontSize -= .2;
-            break;
-    }
-    $('#terminalFont').text('.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}');
-    $('#terminalMargin').text('.terminal div {margin-bottom:' + terminalMargin + 'px;}');
-});
-
 socket.on('response', function (msg) {
     //error returned from bot
     if (msg.user === getCookie('bot')) {
@@ -58,8 +42,26 @@ socket.on('success', function (msg) {
     terminal.echo(stdoutStyle(msg.message))
 });
 
+//handle terminal text zoom in/out on hotkey commands
+function handleZoom() {
+    hotkeys('command+=, command+-', function (event, handler) {
+        switch (handler.key) {
+            case "command+=":
+                terminalMargin += .15;
+                terminalFontSize += .2;
+                break;
+            case "command+-":
+                terminalMargin -= .15;
+                terminalFontSize -= .2;
+                break;
+        }
+        $('#terminalFont').text('.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}');
+        $('#terminalMargin').text('.terminal div {margin-bottom:' + terminalMargin + 'px;}');
+    });
+}
+
 //upload a file to the server
-$(function () {
+function uploadFile() {
     $('#upload-file').change(function () {
         //no bot selected
         if ('{{connected}}' == '') {
@@ -83,7 +85,7 @@ $(function () {
             },
         });
     });
-});
+};
 
 
 /******************************************
@@ -97,6 +99,9 @@ function getPayloads() {
     $.get("/payload", function (data, status) {
         saveData(data)
         populateDictionary(data)
+        sendPayload()
+        generateSearchBar()
+
     });
 }
 
@@ -191,6 +196,7 @@ function generateSearchBar() {
     $('input.search-payload').on('input', function (e) {
         var value = this.value.trim();
         populateDictionary(payloadsList, value)
+        sendPayload()
     });
 
 }
@@ -222,12 +228,10 @@ function sendPayload() {
         });
 
         if (error) {
-            console.log("error");
             displayError($(this).parent().parent())
             return;
         }
 
-        console.log("still here though")
         $.ajax({
             type: "POST",
             url: "/payload",
@@ -240,8 +244,6 @@ function sendPayload() {
     });
 }
 
-getPayloads()
-generateSearchBar()
 
 /******************************************
  On Document ready                        *
@@ -258,15 +260,7 @@ function setHeight() {
     });
 }
 
-$(document).ready(function () {
-    setHeight()
-
-    //sloppy fix, should fix
-    setTimeout(function () {
-        sendPayload()
-    }, 500);
-    $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}</style>');
-    $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin + 'px;}</style>');
+function saveLog() {
     $.ajax({
         type: 'POST',
         url: '/log',
@@ -285,6 +279,18 @@ $(document).ready(function () {
             }
         }
     });
-});
+}
 
-//TODO: Evan fix unnecessary calls to /downloader
+function setTerminalTextSize() {
+    $('head').append('<style id="terminalFont" type="text/css">.terminal-output, .cmd {font-size:' + terminalFontSize + 'px;}</style>');
+    $('head').append('<style id="terminalMargin" type="text/css">.terminal div {margin-bottom:' + terminalMargin + 'px;}</style>');
+}
+
+$(document).ready(function () {
+    handleZoom()
+    getPayloads()
+    setHeight()
+    saveLog()
+    setTerminalTextSize()
+    uploadFile()
+});
