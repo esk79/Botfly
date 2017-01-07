@@ -11,7 +11,6 @@ import json
 from OpenSSL import SSL, crypto
 import sys
 
-
 # Loading library depends on how we want to setup the project later,
 # for now this will do
 try:
@@ -40,8 +39,8 @@ app = flask.Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, async_mode=async_mode)
-thread = None
 
+thread = None
 # Login stuff
 login_manager = LoginManager()
 login_manager.init_app(app)

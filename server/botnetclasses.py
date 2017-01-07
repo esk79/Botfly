@@ -320,8 +320,8 @@ class Bot:
 
     def __init__(self, sock, host_info, socketio, lastonline=int(time.time()), online=True):
         self.sock = formatsock.FormatSocket(sock)
-        self.arch = host_info['arch'][:-1]
-        self.user = host_info['user'][:-1]
+        self.arch = host_info['arch']
+        self.user = host_info['user']
 
         self.socketio = socketio
         self.lastonline = lastonline
