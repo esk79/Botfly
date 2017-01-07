@@ -1,5 +1,5 @@
 '''
-NAME: example payload
+NAME: Example Payload
 DESCRIPTION: This is an example payload to display functionality of the payload system
 VAR SLEEP_TIME = 3: time to sleep between print statements, defaults to 3
 '''
