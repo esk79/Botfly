@@ -146,7 +146,6 @@ def download_file():
           if query parameter "file" specified then instead download
           that file from server
     '''
-    print("here", request.method, request.args)
     if request.method == 'POST':
         filename = request.form.get('file')
         if 'bot' in request.form:
@@ -165,7 +164,6 @@ def download_file():
             filename = request.args.get('file')
 
             real_filename = botnet.getFileName(user,filename)
-            print(real_filename)
             if real_filename:
                 return flask.send_file(real_filename,attachment_filename=os.path.basename(filename))
             else:
