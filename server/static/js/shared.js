@@ -78,7 +78,7 @@ function addInProgress(filename, percent, path, user) {
 function addCompleted(filename, path, user) {
     filenameParsed = filename.split('.')[0];
     var downloadManager = $('div.downloads')
-    downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-8"> <a href="/downloader?user=' + user + '?file=' + path + '" download="' + filename + '" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></a> </div>  <a onclick="deleteFile(\'' + path + '\', \'' + user + '\')" class="col-md-1"><span class="glyphicon glyphicon-remove pull-right" style="color: #a4a7ac"></span></a></div>')
+    downloadManager.append(' <div class="row vertical-align row-margin"> <span class="col-md-6">' + filename + '</span> <div class="col-md-8"> <a href="/downloader?bot=' + user + '?file=' + path + '" download="' + filename + '" class="btn btn-primary pull-right" style="width: 100%;">Download <span class="glyphicon glyphicon-download-alt"></span></a> </div>  <a onclick="deleteFile(\'' + path + '\', \'' + user + '\')" class="col-md-1"><span class="glyphicon glyphicon-remove pull-right" style="color: #a4a7ac"></span></a></div>')
 }
 
 function populateDownloadsDropdown(data) {

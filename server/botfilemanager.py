@@ -116,7 +116,10 @@ class BotNetFileManager:
                     self.fileobjs[uf].close()
                 real_filename = self.filedets[uf][0]
                 self.filedets.pop(uf)
-                os.remove(real_filename)
+                try:
+                    os.remove(real_filename)
+                except:
+                    pass
                 with open(self.filenamefile, "wb") as jsonfile:
                     pickle.dump(self.filedets, jsonfile)
                 return True
