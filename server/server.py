@@ -157,8 +157,8 @@ def download_file():
         return "done"
     elif request.method == 'GET':
         if 'file' in request.args:
-            if 'user' in request.args:
-                user = request.args.get('user')
+            if 'bot' in request.args:
+                user = request.args.get('bot')
             else:
                 user = request.cookies.get('bot')
             filename = request.args.get('file')
@@ -173,8 +173,8 @@ def download_file():
             return flask.Response(filestr, status=200, mimetype='application/json')
     elif request.method == 'DELETE':
         if 'file' in request.args:
-            if 'user' in request.args:
-                user = request.args.get('user')
+            if 'bot' in request.args:
+                user = request.args.get('bot')
             else:
                 user = request.cookies.get('bot')
             filename = request.args.get('file')
