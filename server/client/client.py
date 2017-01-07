@@ -252,7 +252,7 @@ class PayloadLib:
     def __init__(self, bytelock):
         self.bytelock = bytelock
 
-    def upload(self, filename):
+    def upload(self, filename,blocking=False):
         filename = os.path.abspath(os.path.expanduser(filename))
         if os.path.exists(filename):
             filesize = os.stat(filename).st_size
@@ -265,8 +265,11 @@ class PayloadLib:
                         self.bytelock.writeFileup(filename, dat)
                         dat = f.read(ByteLockBundler.PACKET_MAX_DAT)
                     self.bytelock.closeFile(filename)
-            t = threading.Thread(target=downloadfunc)
-            t.start()
+            if blocking:
+                downloadfunc()
+            else:
+                t = threading.Thread(target=downloadfunc)
+                t.start()
             return True
         return False
 
