@@ -314,7 +314,11 @@ def serve(sock):
     sys.stdout = WriterWrapper(lambda s: bytelock.writePrintstr(s))
     sys.stderr = WriterWrapper(lambda s: bytelock.writeErrstr(s))
 
-    proc = subprocess.Popen(["bash"],
+    executable = "bash"
+    if os.name == 'nt':
+        executable = "powershell.exe"
+
+    proc = subprocess.Popen([executable],
                             stdin=subprocess.PIPE,
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE,
@@ -376,7 +380,7 @@ def serve(sock):
             if KILL_PROC in recvjson:
                 with proclock:
                     proc.kill()
-                    proc = subprocess.Popen(["bash"],
+                    proc = subprocess.Popen([executable],
                                             stdin=subprocess.PIPE,
                                             stdout=subprocess.PIPE,
                                             stderr=subprocess.PIPE,
