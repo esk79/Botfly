@@ -1,4 +1,5 @@
 from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 # Todo: turn into sqlite sometime
@@ -33,8 +34,8 @@ class UserManager:
             return inst.unames[uname]
         return None
 
-    @classmethod
-    def validate(cls, uname, passwd):
+    @staticmethod
+    def validate(uname, passwd):
         inst = UserManager.getinstance()
         if uname in inst.unames:
             return inst.unames[uname].validate(passwd)
@@ -44,12 +45,10 @@ class User(UserMixin):
     def __init__(self, uname, passwd, uid):
         self.uname = uname
         self.uid = uid
-        # TODO RED ALERT: FIX THIS FUCKERY
-        self.passwd = passwd
+        self.pwhash = generate_password_hash(passwd)
 
     def get_id(self):
         return self.uid
 
     def validate(self,passwd):
-        # TODO RED ALERT: FIX THIS FUCKERY
-        return self.passwd == passwd
+        return check_password_hash(self.pwhash, passwd)
