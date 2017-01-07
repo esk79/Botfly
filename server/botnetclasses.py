@@ -43,11 +43,13 @@ class BotNet(Thread):
         self.downloaddir = downloadpath
 
     def addConnection(self, user, clientsock, host_info, socketio):
+        print("[*] Adding connection {}".format(user))
         with self.connlock:
             if user in self.offlineConnections:
-                print("Restoring connection")
+                print("\tRestoring connection...")
                 conn = self.offlineConnections[user]
                 conn.setsocket(clientsock)
+                print("\tRestored!")
             else:
                 conn = Bot(clientsock, host_info, socketio)
             self.onlineConnections[user] = conn
@@ -58,6 +60,7 @@ class BotNet(Thread):
 
     def removeConnection(self, user):
         # Will be making changes to allConnections
+        print("[*] Removing user {}".format(user))
         with self.connlock:
             if user in self.onlineConnections:
                 # Wait for any sends to go through for this bot
@@ -75,6 +78,7 @@ class BotNet(Thread):
 
     def setOffline(self, user):
         # Will be making changes to allConnections
+        print("[*] Setting {} offline".format(user))
         with self.connlock:
             if user in self.onlineConnections:
                 # Wait for any sends to go through for this bot

@@ -106,7 +106,7 @@ class FormatSocket:
     def close(self):
         self.sock.close()
 
-class ByteLock:
+class AppendDataLock:
     FILLTO = 2**14
     def __init__(self, datinit=b''):
         self.dat = datinit
@@ -114,7 +114,12 @@ class ByteLock:
         self.condition = threading.Condition(self.lock)
     def append(self,dat):
         with self.lock:
-            while len(self.dat)>=ByteLock.FILLTO:
+            if type(self.dat)!=type(dat):
+                if type(self.dat)==bytes and type(dat)==str:
+                    dat = dat.encode('UTF-8','ignore')
+                elif type(self.dat)==str and type(dat)==bytes:
+                    dat = dat.decode('UTF-8','ignore')
+            while len(self.dat)>=AppendDataLock.FILLTO:
                 self.condition.wait()
             self.dat += dat
     def getdat(self,upto):
@@ -133,10 +138,10 @@ class ByteLockBundler:
     PACKET_MAX_DAT = 2**13
 
     def __init__(self, fsock):
-        self.stdoutbytes = ByteLock()
-        self.stderrbytes = ByteLock()
-        self.printbytes = ByteLock()
-        self.errbytes = ByteLock()
+        self.stdoutbytes = AppendDataLock()
+        self.stderrbytes = AppendDataLock()
+        self.printstrs = AppendDataLock('')
+        self.errstrs = AppendDataLock('')
         self.specialbytes = {}
         self.filebytes = {}
         self.fileclose = []
@@ -150,16 +155,16 @@ class ByteLockBundler:
     def writeStderr(self, wbytes):
         self.stderrbytes.append(wbytes)
 
-    def writePrintbytes(self, wbytes):
-        self.printbytes.append(wbytes)
+    def writePrintstr(self, wstr):
+        self.printstrs.append(wstr)
 
-    def writeErrbytes(self, wbytes):
-        self.errbytes.append(wbytes)
+    def writeErrstr(self, wstr):
+        self.errstrs.append(wstr)
 
     def writeFileup(self, filename, wbytes):
         with self.flock:
             if filename not in self.filebytes:
-                self.filebytes[filename] = ByteLock()
+                self.filebytes[filename] = AppendDataLock()
             bl = self.filebytes[filename]
         bl.append(wbytes)
 
@@ -190,10 +195,10 @@ class ByteLockBundler:
             if len(self.specialbytes)>0:
                 specialremaining = True
 
-        printout = self.printbytes.getdat(bytesize)
+        printout = self.printstrs.getdat(bytesize)
         bytesize -= len(printout)
 
-        errout = self.errbytes.getdat(bytesize)
+        errout = self.errstrs.getdat(bytesize)
         bytesize -= len(errout)
 
         out = self.stdoutbytes.getdat(bytesize)
@@ -217,8 +222,8 @@ class ByteLockBundler:
                 filestream[filename] = wfilebytes
 
         # Abuse python to convert to strings
-        printout = printout.decode('UTF-8')
-        errout = errout.decode('UTF-8')
+        # printout = printout.decode('UTF-8')
+        # errout = errout.decode('UTF-8')
         out = out.decode('UTF-8')
         err = err.decode('UTF-8')
         for filename in filestream.keys():
@@ -298,8 +303,8 @@ def serve(sock):
 
     bytelock = ByteLockBundler(sock)
     payloadlib = PayloadLib(bytelock)
-    sys.stdout = WriterWrapper(lambda s: bytelock.writePrintbytes(s.encode('UTF-8')))
-    sys.stderr = WriterWrapper(lambda s: bytelock.writeErrbytes(s.encode('UTF-8')))
+    sys.stdout = WriterWrapper(lambda s: bytelock.writePrintstr(s))
+    sys.stderr = WriterWrapper(lambda s: bytelock.writeErrstr(s))
 
     proc = subprocess.Popen(["bash"],
                             stdin=subprocess.PIPE,
