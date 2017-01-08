@@ -6,17 +6,10 @@ import base64
 import os
 import time
 
-try:
-    from server import formatsock, server
-    from server.client import client
-    from server.botfilemanager import BotNetFileManager
-    from server.botpayloadmanager import BotNetPayloadManager
-except:
-    import formatsock
-    import server
-    from client import client
-    from botfilemanager import BotNetFileManager
-    from botpayloadmanager import BotNetPayloadManager
+from server import formatsock, server
+from server.client import client
+from server.botfilemanager import BotNetFileManager
+from server.botpayloadmanager import BotNetPayloadManager
 
 
 class BotNet(Thread):

@@ -5,15 +5,9 @@ import os
 import socket
 import ssl
 
-try:
-    from server import formatsock, server
-    from server.client import client
-    from server.botnetclasses import BotNet, Bot
-except:
-    import formatsock
-    import server
-    from client import client
-    from botnetclasses import BotNet, Bot
+from server import formatsock, server
+from server.client import client
+from server.botnetclasses import BotNet, Bot
 
 MIN_CLIENT_VERSION = client.__version__
 
