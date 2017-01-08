@@ -1,57 +1,75 @@
-<nav class="navbar navbar-default" role="navigation">
-    <!-- Brand and toggle get grouped for better mobile display -->
-    <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#mobile-menu">
-                <span class="sr-only">Toggle navigation</span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-                <span class="icon-bar"></span>
-            </button>
-            <a class="navbar-brand" href="{{ url_for('index') }}">Botfly</a>
+<!-- opening fix closed in index.html and finder.html respectively -->
+<div id="wrapper" class="active">
+    <nav class="navbar navbar-default" role="navigation">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#mobile-menu">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="{{ url_for('index') }}">Botfly</a>
+            </div>
+
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <li class="collapse navbar-collapse" id="mobile-menu">
+                <ul class="nav navbar-nav">
+                    <li><a id="menu-toggle" href="#" class="btn-menu toggle">
+                        Bots
+                    </a></li>
+                </ul>
+                <ul class="nav navbar-nav">
+                    <li><a href="{{ url_for('finder') }}">Finder</a></li>
+                </ul>
+                <ul class="nav navbar-nav">
+                    <li class="notifications">
+                    </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a class="dropdown-toggle" data-toggle="dropdown"><i
+                                class="fa fa-shopping-cart"></i>Downloads <span
+                                class="num-downloads badge">0</span></a>
+                        <div class="arrow-up" style="position:absolute; left:40%"></div>
+
+                        <ul class="dropdown-menu rcorners">
+                            <div class="container downloads font-large"
+                                 style="width:400px; margin-left: 0px;margin-right: 0px;">
+                            </div>
+                        </ul>
+                    </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <select class="form-control" id="bot" name="bot" style="width: 150px">
+                            <option value="default" disabled selected>Select bot...</option>
+                            {% for bot in bot_list %}
+                                <option value="{{ bot }}">{{ bot }}</option>
+                            {% endfor %}
+                        </select>
+                    </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    {% if connected %}
+                        <li><a>Connected: {{ connected }}</a></li>
+                    {% endif %}
+                </ul>
+                <!--end navbar-right -->
+            </li>
+            <!-- /.navbar-collapse -->
         </div>
-
-        <!-- Collect the nav links, forms, and other content for toggling -->
-        <li class="collapse navbar-collapse" id="mobile-menu">
-            <ul class="nav navbar-nav">
-                <li><a href="{{ url_for('finder') }}">Finder</a></li>
-            </ul>
-            <ul class="nav navbar-nav">
-                <li class="notifications">
-                </li>
-            </ul>
-
-            <ul class="nav navbar-nav navbar-right">
-                <li class="dropdown">
-                    <a class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-shopping-cart"></i>Downloads <span
-                            class="num-downloads badge">0</span></a>
-                    <div class="arrow-up" style="position:absolute; left:40%"></div>
-
-                    <ul class="dropdown-menu rcorners">
-                        <div class="container downloads font-large"
-                             style="width:400px; margin-left: 0px;margin-right: 0px;">
-                        </div>
-                    </ul>
-                </li>
-            </ul>
-            <ul class="nav navbar-nav navbar-right">
-                <li class="dropdown">
-                    <select class="form-control" id="bot" name="bot" style="width: 150px">
-                        <option value="default" disabled selected>Select bot...</option>
-                        {% for bot in bot_list %}
-                            <option value="{{ bot }}">{{ bot }}</option>
-                        {% endfor %}
-                    </select>
-                </li>
-            </ul>
-            <ul class="nav navbar-nav navbar-right">
-                {% if connected %}
-                    <li><a>Connected: {{ connected }}</a></li>
-                {% endif %}
-            </ul>
-            <!--end navbar-right -->
-        </li>
-    <!-- /.navbar-collapse -->
+    </nav>
+    <!--end container -->
+    <!-- Sidebar -->
+    <div id="sidebar-wrapper">
+        <ul class="sidebar-nav nav">
+            <li>
+{#                <a>#}
+{#                    <span class="fa fa-anchor solo">Anchor 1</span>#}
+{#                </a>#}
+            </li>
+        </ul>
     </div>
-</nav>
-<!--end container -->
+    <!-- Page content -->

@@ -4,42 +4,47 @@
 {% include 'nav.html' %}
 <body>
 <!-- Page Content -->
-<div class="container">
-    <div class="row body">
-        <div class="col-md-3 left-side">
-            <ul>
-                <form id="upload-file" method="post" enctype="multipart/form-data">
-                    <fieldset>
-                        <label class="btn btn-primary btn-block btn-file ">
-                            Upload File <input name="file" type="file" style="display: none;">
-                        </label>
-                    </fieldset>
-                </form>
-            </ul>
-            <ul>
-                <div class="well">
-                    <div class="row error">
-                        <input type="search" class="search-query form-control search-payload"
-                               placeholder="Search payloads..."/>
-                    </div>
+<div id="page-content-wrapper">
+    <div class="page-content">
+        <div class="container">
+            <div class="row body">
+                <div class="col-md-3 left-side">
+                    <ul>
+                        <form id="upload-file" method="post" enctype="multipart/form-data">
+                            <fieldset>
+                                <label class="btn btn-primary btn-block btn-file ">
+                                    Upload File <input name="file" type="file" style="display: none;">
+                                </label>
+                            </fieldset>
+                        </form>
+                    </ul>
+                    <ul>
+                        <div class="well">
+                            <div class="row error">
+                                <input type="search" class="search-query form-control search-payload"
+                                       placeholder="Search payloads..."/>
+                            </div>
 
-                    <div class="row payload-desc">
-                        <div class="panel-group payloads" id="accordion">
+                            <div class="row payload-desc">
+                                <div class="panel-group payloads" id="accordion">
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </ul>
+
                 </div>
-            </ul>
-
+                <!--</form>-->
+                <div class="col-md-9 right-side">
+                    <div id="terminal"></div>
+                </div>
+            </div>
+            <!-- /.row -->
         </div>
-        <!--</form>-->
-
-        <div class="col-md-9 right-side">
-            <div id="terminal"></div>
-        </div>
+        <!-- /.container -->
     </div>
-    <!-- /.row -->
 </div>
-<!-- /.container -->
+<!-- extra div closes opening div from nav import -->
+</div>
 <script>
     lastOut = []
 
