@@ -45,7 +45,7 @@ class BotNet(Thread):
             if user in self.offlineConnections:
                 print("\tRestoring connection...")
                 conn = self.offlineConnections[user]
-                conn.setip(host_info['ip'])
+                conn.setip(host_info['addr'])
                 conn.setsocket(clientsock)
                 print("\tRestored!")
             else:
@@ -323,7 +323,7 @@ class Bot:
         self.sock = formatsock.FormatSocket(sock)
         self.user = host_info['user']
         self.arch = host_info['arch']
-        self.ip = host_info['ip']
+        self.ip = host_info['addr']
 
         self.socketio = socketio
         self.lastonline = lastonline
