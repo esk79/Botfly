@@ -52,7 +52,7 @@ def recreate_test_databases(engine=None, session=None):
     if session == None:
         session = db.session
 
-    if not os.path.exists(DB_LOC):
+    if not os.path.exists(os.path.join(os.path.dirname(__file__),DB_LOC)):
         db.create_all()
         UserManager.create_user('admin','secret')
 
