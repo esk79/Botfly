@@ -7,7 +7,7 @@ namespace = '/bot';
 socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
 
 //new bot selected
-$(function () {
+function botSelected() {
     $('#bot').change(function () {
         var value = $(this).val();
         $.ajax({
@@ -21,7 +21,7 @@ $(function () {
             }
         });
     });
-});
+};
 
 
 //new connection received
@@ -125,11 +125,6 @@ function deleteFile(file, user) {
     });
 }
 
-getDownloading()
-setInterval(function () {
-    checkUpdateDownloads();
-}, 1000);
-
 function checkUpdateDownloads() {
     if ($("li.dropdown").hasClass('open')) {
         //dropdown is opened
@@ -138,4 +133,20 @@ function checkUpdateDownloads() {
         }, 1000);
     }
 }
+
+function toggleSidebar() {
+    $("#menu-toggle").click(function (e) {
+        e.preventDefault();
+        $("#wrapper").toggleClass("active");
+    });
+}
+
+$(document).ready(function () {
+    botSelected()
+    getDownloading()
+    setInterval(function () {
+        checkUpdateDownloads();
+    }, 1000);
+    toggleSidebar()
+});
 

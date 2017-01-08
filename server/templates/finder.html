@@ -5,30 +5,35 @@
 
 <body data-gr-c-s-loaded="true">
 
+<div id="page-content-wrapper">
+    <div class="page-content">
+        <div class="filemanager">
 
-<div class="filemanager">
+            <div class="row">
+                <div class="search col-md-2 input-group"><input type="search" class="form-control file-search"
+                                                                placeholder="Find a file...">
+                </div>
 
-    <div class="row">
-        <div class="search col-md-2 input-group"><input type="search" class="form-control file-search" placeholder="Find a file...">
+                <div class="breadcrumbs col-md-10"><span class="folderName"></span></div>
+            </div>
+
+
+            <div class="row">
+                <ul class="data animated" style="">
+
+                </ul>
+
+                <div class="nothingfound" style="display: none;">
+                    <div class="nofiles"></div>
+                    <span>No files here.</span>
+                </div>
+            </div>
+
         </div>
-
-        <div class="breadcrumbs col-md-10"><span class="folderName"></span></div>
     </div>
-
-
-    <div class="row">
-        <ul class="data animated" style="">
-
-        </ul>
-
-        <div class="nothingfound" style="display: none;">
-            <div class="nofiles"></div>
-            <span>No files here.</span>
-        </div>
-    </div>
-
 </div>
-
+<!-- extra div closes opening div from nav import -->
+</div>
 
 <script type="text/javascript"
         src="{{ url_for('static', filename='js/finder.js') }}"></script>

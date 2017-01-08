@@ -144,7 +144,6 @@ function populateDictionary(data, search) {
                         //append variable input box
                         var varibaleInput = $('<div class="variable-inputs"><div class="input-group-sm margin-bottom"><input type="text" id="' + variableID + '" class="form-control ' + required + '" placeholder="' + variable + '"></div>')
                         varibaleInputList.append(varibaleInput);
-
                     }
                 }
                 if (hasVariables) {
