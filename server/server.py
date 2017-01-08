@@ -148,6 +148,8 @@ def register():
     elif request.method == 'POST':
         uname = request.form.get('username')
         emailaddr = request.form.get('email')
+        if User.query.filter_by(uname=uname).first():
+            return flask.render_template('register.html', default_email=emailaddr, error='Username already taken')
         if not valid_email(emailaddr):
             return flask.render_template('register.html', default_email=emailaddr, error='Invalid email')
         passwd1 = request.form.get('password1')
