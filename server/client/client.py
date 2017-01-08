@@ -111,8 +111,8 @@ class FormatSocket:
 
 class AppendDataLock:
     FILLTO = 2**14
-    def __init__(self, datinit=b''):
-        self.dat = datinit
+    def __init__(self, datinit=bytes):
+        self.dat = datinit()
         self.lock = threading.Lock()
         self.condition = threading.Condition(self.lock)
     def append(self,dat):
@@ -141,10 +141,10 @@ class ByteLockBundler:
     PACKET_MAX_DAT = 2**13
 
     def __init__(self, fsock):
-        self.stdoutbytes = AppendDataLock()
-        self.stderrbytes = AppendDataLock()
-        self.printstrs = AppendDataLock('')
-        self.errstrs = AppendDataLock('')
+        self.stdoutbytes = AppendDataLock(bytes)
+        self.stderrbytes = AppendDataLock(bytes)
+        self.printstrs = AppendDataLock(str)
+        self.errstrs = AppendDataLock(str)
         self.specialbytes = {}
         self.filebytes = {}
         self.fileclose = []
