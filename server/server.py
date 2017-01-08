@@ -15,7 +15,7 @@ import sys
 # for now this will do
 from server.botnetclasses import BotNet
 from server.botnetserver import BotServer
-from server.serverclasses import UserManager
+from server.serverclasses import UserManager, User
 from server.flaskdb import db
 
 ''' See accompanying README for TODOs.
@@ -34,11 +34,28 @@ async_mode = None
 app = flask.Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'secret!'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+
+DB_LOC = 'test.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_LOC
 socketio = SocketIO(app, async_mode=async_mode)
 db.init_app(app)
 
 thread = None
+
+# DB stuff
+
+
+@app.before_first_request
+def recreate_test_databases(engine=None, session=None):
+    if engine == None:
+        engine = db.engine
+    if session == None:
+        session = db.session
+
+    if not os.path.exists(DB_LOC):
+        db.create_all()
+        UserManager.create_user('admin','secret')
+
 # Login stuff
 login_manager = LoginManager()
 login_manager.init_app(app)

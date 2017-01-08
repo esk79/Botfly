@@ -43,8 +43,6 @@ class BotNet(Thread):
         self.logs = {}
         self.socketio = socketio
 
-        print(payloadpath,downloadpath)
-
         self.filemanager = BotNetFileManager(downloadpath)
         self.payloadmanager = BotNetPayloadManager(payloadpath)
         self.downloaddir = downloadpath

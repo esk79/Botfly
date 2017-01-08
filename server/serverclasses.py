@@ -11,52 +11,39 @@ class UserManager:
         self.users = {}
         self.unames = {}
 
-        adminuser = User('admin', 'secret', 'admin-id')
-        self.users[adminuser.uid] = adminuser
-        self.unames[adminuser.uname] = adminuser
-
-
-    @staticmethod
-    def getinstance():
-        if UserManager.instance is None:
-            UserManager.instance = UserManager()
-        return UserManager.instance
-
     @staticmethod
     def get(user_id):
-        inst = UserManager.getinstance()
-        if user_id in inst.users:
-            return inst.users[user_id]
-        return None
+        return User.query.filter_by(uid=user_id).first()
 
     @staticmethod
     def getbyname(uname):
-        inst = UserManager.getinstance()
-        if uname in inst.unames:
-            return inst.unames[uname]
-        return None
+        return User.query.filter_by(uname=uname).first()
 
     @staticmethod
     def validate(uname, passwd):
-        inst = UserManager.getinstance()
-        if uname in inst.unames:
-            return inst.unames[uname].validate(passwd)
-        return False
+        user = User.query.filter_by(uname=uname).first()
+        if user:
+            return user.validate(passwd)
 
     @staticmethod
     def create_user(uname, passwd):
-        inst = UserManager.getinstance()
-        uid = uuid.uuid4()
-        adminuser = User(uname, passwd, uid)
-        inst.users[adminuser.uid] = adminuser
-        inst.unames[adminuser.uname] = adminuser
+        uid = str(uuid.uuid4())
+        newuser = User(uname, passwd, uid)
+        db.session.add(newuser)
+        db.session.commit()
 
+    @staticmethod
+    def change_password(uname, newpassword):
+        user = User.query.filter_by(uname=uname).first()
+        if user:
+            user.change_password(newpassword)
 
 class User(UserMixin,db.Model):
     __tablename__ = 'User'
     uid = db.Column(db.String(40), unique=True, primary_key=True)
     uname = db.Column(db.String(80), unique=True)
     pwhash = db.Column(db.String(80))
+
     def __init__(self, uname, passwd, uid):
         self.uname = uname
         self.uid = uid
@@ -67,6 +54,9 @@ class User(UserMixin,db.Model):
 
     def validate(self,passwd):
         return check_password_hash(self.pwhash, passwd)
+
+    def change_password(self, newpasswd):
+        self.pwhash = generate_password_hash(newpasswd)
 
     def __repr__(self):
         return '<User %r>' % self.uname

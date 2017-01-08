@@ -1,7 +1,7 @@
 # Created by .ignore support plugin (hsz.mobi)
 .idea/
-*.pyc
 **/downloads/*
 **/__pycache__/
 **/cert/*
 **/logs/*
+**.db
