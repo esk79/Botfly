@@ -26,9 +26,8 @@ class UserManager:
             return user.validate(passwd)
 
     @staticmethod
-    def create_user(uname, passwd):
-        uid = str(uuid.uuid4())
-        newuser = User(uname, passwd, uid)
+    def create_user(uname, email, passwd):
+        newuser = User(uname, email, passwd)
         db.session.add(newuser)
         db.session.commit()
 
@@ -43,10 +42,14 @@ class User(UserMixin, db.Model):
     __tablename__ = 'Users'
     uid = db.Column(db.String(40), unique=True, primary_key=True)
     uname = db.Column(db.String(80), unique=True)
+    email = db.Column(db.String(120), unique=True)
     pwhash = db.Column(db.String(80))
 
-    def __init__(self, uname, passwd, uid):
+    def __init__(self, uname, email, passwd, uid=None):
         self.uname = uname
+        self.email = email
+        if uid is None:
+            uid = str(uuid.uuid4())
         self.uid = uid
         self.pwhash = generate_password_hash(passwd)
 

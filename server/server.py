@@ -2,14 +2,19 @@ import eventlet
 eventlet.monkey_patch()
 
 import os
+import sys
+import json
+import re
+from OpenSSL import crypto
+from urllib import parse
+
 import flask
 from flask import request
 import flask_login
 from flask_login import LoginManager, login_required
 from flask_socketio import SocketIO
-import json
-from OpenSSL import crypto
-import sys
+from flask_mail import Message, Mail
+from itsdangerous import URLSafeTimedSerializer
 
 # Loading library depends on how we want to setup the project later,
 # for now this will do
@@ -34,11 +39,15 @@ async_mode = None
 app = flask.Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SECRET_KEY'] = 'secret!'
+app.config['SECURITY_PASSWORD_SALT'] = 'secret_salt!'
 
 DB_LOC = 'test.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_LOC
 socketio = SocketIO(app, async_mode=async_mode)
 db.init_app(app)
+
+mail = Mail()
+mail.init_app(app)
 
 thread = None
 
@@ -50,7 +59,7 @@ thread = None
 def recreate_test_databases(engine=None, session=None):
     db.create_all()
     if not User.query.filter_by(uname='admin').first():
-        UserManager.create_user('admin', 'secret')
+        UserManager.create_user('admin', 'fake@email.com', 'secret')
 
 
 # Login stuff
@@ -98,17 +107,87 @@ def logout():
     return flask.redirect(flask.url_for('login'))
 
 
+@app.route("/profile")
+@login_required
+def change_password():
+    flask.flash("Under construction")
+    flask.redirect(flask.url_for('index'))
+
+
+@app.route("/invite", methods=['GET','POST'])
+@login_required
+def invite():
+    error = None
+    manual_mail = None
+    if request.method == 'POST':
+        subject = 'Botfly Invitation'
+        email_addr = request.form.get('email')
+        email_message = request.form.get('message')
+        if valid_email(email_addr):
+            print("valid")
+            link = make_link(email_addr)
+            email_message = parse.quote_plus(email_message + '\n'+link)
+            try:
+                print("trying")
+                msg = Message(subject=subject, recipients=[email_addr], body=email_message)
+                mail.send(msg)
+                flask.flash('Message sent!')
+                return flask.redirect(flask.url_for('index'))
+            except:
+                print("manual")
+                manual_mail = {'addr': email_addr, 'subject': subject, 'body': email_message}
+    return flask.render_template('invite.html', error=error, manual_mail=manual_mail)
+
+
+@app.route("/register", methods=['GET', 'POST'])
+def register():
+    if request.method == 'GET' and 'token' in request.args:
+        token = request.args.get('token')
+        emailaddr = confirm_token(token)
+        if emailaddr:
+            return flask.render_template('register.html', default_email=emailaddr)
+        else:
+            flask.flash("Invalid token")
+    elif request.method == 'POST':
+        uname = request.form.get('username')
+        emailaddr = request.form.get('email')
+        if not valid_email(emailaddr):
+            return flask.render_template('register.html', default_email=emailaddr, error='Invalid email')
+        passwd1 = request.form.get('password1')
+        passwd2 = request.form.get('password2')
+        if passwd1 == passwd2:
+            UserManager.create_user(uname,emailaddr,passwd1)
+            flask.flash("Account creation success!")
+            return flask.redirect(flask.url_for('login'))
+        else:
+            return flask.render_template('register.html', default_email=emailaddr, error='Passwords do not match')
+    else:
+        flask.flash("No token specified")
+    return flask.redirect(flask.url_for('login'))
+
+
 # Research more
 def is_safe_url(nexturl):
     return True
 
 
-@app.route("/profile")
-@login_required
-def change_password():
-    pass
+def valid_email(emailaddr):
+    return re.match(r'[^@]+@[^@]+\.[^@]+', emailaddr)
 
 
+def make_link(emailaddr):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    token = serializer.dumps(emailaddr, salt=app.config['SECURITY_PASSWORD_SALT'])
+    return flask.url_for('register', _external=True, token=token)
+
+
+def confirm_token(token):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    try:
+        email = serializer.loads(token,salt=app.config['SECURITY_PASSWORD_SALT'])
+        return email
+    except Exception:
+        return False
 # Done with login stuff
 
 
