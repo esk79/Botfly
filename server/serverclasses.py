@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 from server.flaskdb import db
 
-# Todo: turn into sqlite sometime
+
 class UserManager:
     instance = None
 
@@ -38,8 +38,9 @@ class UserManager:
         if user:
             user.change_password(newpassword)
 
-class User(UserMixin,db.Model):
-    __tablename__ = 'User'
+
+class User(UserMixin, db.Model):
+    __tablename__ = 'Users'
     uid = db.Column(db.String(40), unique=True, primary_key=True)
     uname = db.Column(db.String(80), unique=True)
     pwhash = db.Column(db.String(80))
@@ -52,11 +53,11 @@ class User(UserMixin,db.Model):
     def get_id(self):
         return self.uid
 
-    def validate(self,passwd):
+    def validate(self, passwd):
         return check_password_hash(self.pwhash, passwd)
 
     def change_password(self, newpasswd):
         self.pwhash = generate_password_hash(newpasswd)
 
     def __repr__(self):
-        return '<User %r>' % self.uname
+        return '<User {}>'.format(self.uname)
