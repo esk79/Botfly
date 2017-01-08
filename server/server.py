@@ -124,17 +124,14 @@ def invite():
         email_addr = request.form.get('email')
         email_message = request.form.get('message')
         if valid_email(email_addr):
-            print("valid")
             link = make_link(email_addr)
             email_message = parse.quote_plus(email_message + '\n'+link)
             try:
-                print("trying")
                 msg = Message(subject=subject, recipients=[email_addr], body=email_message)
                 mail.send(msg)
                 flask.flash('Message sent!')
                 return flask.redirect(flask.url_for('index'))
             except:
-                print("manual")
                 manual_mail = {'addr': email_addr, 'subject': subject, 'body': email_message}
     return flask.render_template('invite.html', error=error, manual_mail=manual_mail)
 
