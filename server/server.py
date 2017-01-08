@@ -52,8 +52,8 @@ def recreate_test_databases(engine=None, session=None):
     if session == None:
         session = db.session
 
-    if not os.path.exists(os.path.join(os.path.dirname(__file__),DB_LOC)):
-        db.create_all()
+    db.create_all()
+    if not User.query.filter_by(uname='admin').first():
         UserManager.create_user('admin','secret')
 
 # Login stuff
@@ -98,7 +98,7 @@ def login():
 @login_required
 def logout():
     flask_login.logout_user()
-    return flask.url_for('login')
+    return flask.redirect(flask.url_for('login'))
 
 
 # Research more
