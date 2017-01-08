@@ -462,7 +462,10 @@ def serve(sock):
 
 def getInfo():
     user = getpass.getuser()
-    arch = platform.system() + " " + platform.release()
+    if platform.system() == 'Darwin':
+        arch = 'OSX ' + platform.mac_ver()[0] + ' ' + platform.mac_ver()[2]
+    else:
+        arch = platform.system() + " " + platform.release()
     return user, arch
 
 

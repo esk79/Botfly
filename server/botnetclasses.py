@@ -5,6 +5,7 @@ import select
 import base64
 import os
 import time
+import platform
 
 from server import formatsock, server
 from server.client import client
@@ -321,8 +322,8 @@ class Bot:
 
     def __init__(self, sock, host_info, socketio, lastonline=int(time.time()), online=True):
         self.sock = formatsock.FormatSocket(sock)
-        self.arch = host_info['arch']
         self.user = host_info['user']
+        self.arch = host_info['arch']
 
         self.socketio = socketio
         self.lastonline = lastonline
