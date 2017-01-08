@@ -45,6 +45,7 @@ class BotNet(Thread):
             if user in self.offlineConnections:
                 print("\tRestoring connection...")
                 conn = self.offlineConnections[user]
+                conn.setip(host_info['ip'])
                 conn.setsocket(clientsock)
                 print("\tRestored!")
             else:
@@ -371,6 +372,10 @@ class Bot:
                 for runop in self.opqueue:
                     func, args = runop
                     func(*args)
+
+    def setip(self, ip):
+        with self.datalock:
+            self.ip = ip
 
     def close(self):
         with self.datalock:
