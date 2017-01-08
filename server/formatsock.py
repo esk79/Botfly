@@ -2,8 +2,8 @@ import struct
 import sys
 import threading
 
-class FormatSocket:
 
+class FormatSocket:
     SIZE_BYTES = 4
     RECV_SIZE = 8192
 

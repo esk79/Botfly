@@ -3,6 +3,7 @@ import pickle
 import os
 import uuid
 
+
 class BotNetFileManager:
     FILENAME_OBJFILE = 'filenames.json'
 

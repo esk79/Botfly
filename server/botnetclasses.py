@@ -1,3 +1,7 @@
+from server import formatsock
+from server.botfilemanager import BotNetFileManager
+from server.botpayloadmanager import BotNetPayloadManager
+
 import json
 from threading import Thread
 import threading
@@ -5,10 +9,6 @@ import select
 import base64
 import os
 import time
-
-from server import formatsock
-from server.botfilemanager import BotNetFileManager
-from server.botpayloadmanager import BotNetPayloadManager
 
 
 class BotNet(Thread):

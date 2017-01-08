@@ -2,6 +2,7 @@ import os
 import sys
 import json
 
+
 class BotNetPayloadManager:
     PAYLOAD_EXT = '.py'
     COMMENT_DELIMIT = ['"""',"'''"]

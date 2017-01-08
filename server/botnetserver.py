@@ -1,3 +1,7 @@
+from server import formatsock
+from server.client import client
+from server.botnetclasses import Bot
+
 from threading import Thread
 from distutils.version import LooseVersion
 import json
@@ -5,9 +9,6 @@ import os
 import socket
 import ssl
 
-from server import formatsock
-from server.client import client
-from server.botnetclasses import Bot
 
 MIN_CLIENT_VERSION = client.__version__
 

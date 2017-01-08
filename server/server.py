@@ -1,6 +1,9 @@
-import eventlet
-eventlet.monkey_patch()
+from server.botnetclasses import BotNet
+from server.botnetserver import BotServer
+from server.serverclasses import UserManager, User
+from server.flaskdb import db
 
+import eventlet
 import os
 import sys
 import json
@@ -16,12 +19,8 @@ from flask_socketio import SocketIO
 from flask_mail import Message, Mail
 from itsdangerous import URLSafeTimedSerializer
 
-# Loading library depends on how we want to setup the project later,
-# for now this will do
-from server.botnetclasses import BotNet
-from server.botnetserver import BotServer
-from server.serverclasses import UserManager, User
-from server.flaskdb import db
+eventlet.monkey_patch()
+
 
 ''' See accompanying README for TODOs.
 
