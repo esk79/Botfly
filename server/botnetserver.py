@@ -58,5 +58,5 @@ class BotServer(Thread):
                 bot = Bot(clientsock, host_info, self.socketio)
                 bot.sendClientFile(open(os.path.abspath(client.__file__), 'rb'))
             else:
-                print("[+] Received connection from {}".format(user))
+                print("[+] Received connection from {} (id: {})".format(user,host_info['bid']))
                 self.botnet.addConnection(user, clientsock, host_info, self.socketio)

