@@ -141,12 +141,89 @@ function toggleSidebar() {
     });
 }
 
+/*************************************
+ Bot List sidebar          *
+ *************************************/
+
+// get current bot list
+function getBotList() {
+    $.get("/bots", function (data, status) {
+        addToBotSideBar(data)
+    });
+}
+
+function addToBotSideBar(data) {
+
+    //get table body objects from DOM
+    var onlineTable = $('tbody.online')
+    var offlineTable = $('tbody.offline')
+
+    onlineTable.empty()
+    offlineTable.empty()
+
+    //iterate over all bots
+    for (var bot in data) {
+        if (data.hasOwnProperty(bot)) {
+
+            var botName = bot
+            var botData = data[bot]
+            var lastOnline = createDateString(botData['lastonline'])
+            var ip = botData['ip']
+            var arch = botData['arch']
+            var online = botData['online']
+
+            //get bot location and add to html within callback
+            $.get("https://www.freegeoip.net/json/" + ip, function (data) {
+                var state = data['region_code']
+                if (state == "") state = "NA"
+
+                var tableRow;
+                if (online) {
+                    tableRow = $('<tr><td><h4>' + botName + '</h4></td><td><button type="button" class="btn btn-warning btn-sm">' + arch + '</button></td><td><button type="button" class="btn btn-danger btn-sm">' + state + '</button></td></tr>')
+                    onlineTable.append(tableRow)
+                } else {
+                    tableRow = $('<tr><td><h4>' + botName + '</h4></td><td><button type="button" class="btn btn-success btn-sm">' + lastOnline + '</button></td><td><button type="button" class="btn btn-danger btn-sm">' + state + '</button></td></tr>')
+                    offlineTable.append(tableRow)
+                }
+
+            });
+        }
+    }
+
+}
+
+function createDateString(rawDate) {
+    var dayOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    var lastOnline = new Date(rawDate * 1000);
+    var now = new Date(Date.now());
+    var timeDiff = now.getTime() - lastOnline.getTime();
+    var diffDays = Math.floor(timeDiff / (1000 * 3600 * 24));
+
+    if (diffDays == 0) {
+        return "Today"
+    }
+    if (diffDays == -1) {
+        return "Yesterday"
+    }
+    if (diffDays >= -6) {
+        return dayOfWeek[lastOnline.getDay()]
+    }
+
+    return lastOnline.toDateString();
+}
+
+
+/*************************************
+ Document on ready          *
+ *************************************/
+
 $(document).ready(function () {
     botSelected()
     getDownloading()
+    getBotList()
+    toggleSidebar()
     setInterval(function () {
         checkUpdateDownloads();
     }, 1000);
-    toggleSidebar()
 });
 
