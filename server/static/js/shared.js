@@ -181,12 +181,8 @@ function addToBotSideBar(data) {
                 addedOfflineHeader = true
             }
 
-            //get bot location and add to html within callback
-            //$.get("https://www.freegeoip.net/json/" + ip, function (data) {
-            //    var state = data['region_code']
-
             var tableRow;
-            console.log(botName)
+
             if (online) {
                 tableRow = $('<tr><td><h4>' + botName + '</h4></td><td align="center"><div  class="btn btn-warning btn-xs button-center">' + arch + '</div></td><td align="center"><div class="btn btn-danger btn-xs button-center">' + state + '</div></td></tr>')
                 onlineTableBody.append(tableRow)
@@ -195,7 +191,6 @@ function addToBotSideBar(data) {
                 offlineTableBody.append(tableRow)
             }
             handleBotSelection()
-            //});
         }
     }
 

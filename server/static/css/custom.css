@@ -252,8 +252,13 @@ ul.sidebar-nav a:hover, a:focus {
     margin-left: 5px;
 }
 
-.table.table {
+.sidebar-nav table {
     margin-bottom: 0px;
+    table-layout: fixed;
+}
+
+.sidebar-nav td {
+    word-wrap: break-word
 }
 
 /*@media (max-width: 767px) {*/
