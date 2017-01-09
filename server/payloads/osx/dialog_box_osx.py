@@ -7,7 +7,6 @@ VAR BUTTONS = OK: Add optional buttons to pop-up. Separate buttons with commas (
 import subprocess
 import sys
 
-
 #ugly but chaining is actually proven best way to do multiple replace
 buttons  = str(BUTTONS.split(',')).replace('[', '{').replace(']', '}').replace('\'', '"')
 buttons = 'buttons ' + buttons
