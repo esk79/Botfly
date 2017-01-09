@@ -16,7 +16,7 @@ function printOutStyle(message) {
 
 socket.on('response', function (msg) {
     //error returned from bot
-    if (msg.user === getCookie('bot')) {
+    if (msg.user === $.cookie("bot")) {
         if (msg.printout != '') {
             terminal.echo(printOutStyle(msg.printout));
         }
@@ -64,7 +64,7 @@ function handleZoom() {
 function uploadFile() {
     $('#upload-file').change(function () {
         //no bot selected
-        if ('{{connected}}' == '') {
+        if ($.cookie("bot") == null) {
             terminal.error('No bot selected.');
             return;
         }
@@ -219,6 +219,7 @@ function sendPayload() {
         name = $(this).attr('name')
         postData = {"payload": name}
 
+
         $(this).parent().find("input").each(function () {
             postData[$(this).attr('placeholder')] = $(this).val()
             if ($(this).hasClass('required') && $(this).val() == '') {
@@ -253,7 +254,7 @@ function setHeight() {
     });
 }
 
-function saveLog() {
+function log() {
     $.ajax({
         type: 'POST',
         url: '/log',
@@ -283,7 +284,7 @@ $(document).ready(function () {
     handleZoom()
     getPayloads()
     setHeight()
-    saveLog()
+    log()
     setTerminalTextSize()
     uploadFile()
 });

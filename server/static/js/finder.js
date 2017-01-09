@@ -218,7 +218,7 @@ $(document).ready(function () {
         //handle response emitted by server
         var not_received = true;
         socket.on('finder', function (msg) {
-            if (msg.user === getCookie('bot')) {
+            if (msg.user === $.cookie("bot")) {
                 not_received = false;
                 if (msg.special.hasOwnProperty('ls')) {
                     $('.filemanager .search').show();

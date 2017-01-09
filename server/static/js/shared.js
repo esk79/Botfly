@@ -6,29 +6,12 @@
 namespace = '/bot';
 socket = io.connect(location.protocol + '//' + document.domain + ':' + location.port + namespace);
 
-//new bot selected
-function botSelected() {
-    $('#bot').change(function () {
-        var value = $(this).val();
-        $.ajax({
-            type: "POST",
-            url: "/choose",
-            data: {
-                bot: value
-            },
-            success: function (data) {
-                location.reload();
-            }
-        });
-    });
-};
-
 
 //new connection received
 socket.on('connection', function (msg) {
     $('li.notifications').append('<a class="conn-' + msg.user + '">' + 'New connection from: ' + msg.user + '</a>');
     $('.conn-' + msg.user).fadeOut(5000);
-    $("#bot").append('<option value="' + msg.user + '">' + msg.user + '</option>')
+    getBotList()
 });
 
 //TODO: consolidate
@@ -36,18 +19,12 @@ socket.on('connection', function (msg) {
 socket.on('disconnect', function (msg) {
     $('li.notifications').append('<a class="disconn-' + msg.user + '">' + 'Lost connection to: ' + msg.user + '</a>');
     $('.disconn-' + msg.user).fadeOut(5000);
-    $("#bot option[value='" + msg.user + "']").remove();
+    getBotList()
     if ($('#bot > option').length == 1 || $("#bot").val() == msg.user) {
         $.removeCookie('bot', {path: '/'});
         location.reload();
     }
 });
-
-function getCookie(name) {
-    var value = "; " + document.cookie;
-    var parts = value.split("; " + name + "=");
-    if (parts.length >= 2) return parts.pop().split(";").shift();
-}
 
 /*************************************
  Downloads dropdown code begins here *
@@ -134,16 +111,19 @@ function checkUpdateDownloads() {
     }
 }
 
-function toggleSidebar() {
-    $("#menu-toggle").click(function (e) {
-        e.preventDefault();
-        $("#wrapper").toggleClass("active");
-    });
-}
 
 /*************************************
  Bot List sidebar          *
  *************************************/
+
+
+function toggleSidebar() {
+    $("#menu-toggle").click(function (e) {
+        e.preventDefault();
+        $("#wrapper").toggleClass("active");
+        getBotList()
+    });
+}
 
 // get current bot list
 function getBotList() {
@@ -155,11 +135,24 @@ function getBotList() {
 function addToBotSideBar(data) {
 
     //get table body objects from DOM
+    var onlineTableBody = $('tbody.online')
+    var offlineTableBody = $('tbody.offline')
+
     var onlineTable = $('tbody.online')
     var offlineTable = $('tbody.offline')
 
     onlineTable.empty()
     offlineTable.empty()
+    onlineTableBody.empty()
+    offlineTableBody.empty()
+
+    updateConnectionStatus()
+
+    var onlineHeader = $('<h3>Online</h3>')
+    var offlineHeader = $('<h3>Offline</h3>')
+
+    var addedOnlineHeader = false
+    var addedOfflineHeader = false
 
     //iterate over all bots
     for (var bot in data) {
@@ -168,28 +161,57 @@ function addToBotSideBar(data) {
             var botName = bot
             var botData = data[bot]
             var lastOnline = createDateString(botData['lastonline'])
-            var ip = botData['ip']
+            var state;
+            if (botData['state'] != "") {
+                state = botData['state']
+
+            } else {
+                state = "NA"
+            }
             var arch = botData['arch']
             var online = botData['online']
 
+
+            if (online && !addedOnlineHeader) {
+                onlineTable.prepend(onlineHeader)
+                addedOnlineHeader = true
+            }
+            if (!online && !addedOfflineHeader) {
+                offlineTable.prepend(offlineHeader)
+                addedOfflineHeader = true
+            }
+
             //get bot location and add to html within callback
-            $.get("https://www.freegeoip.net/json/" + ip, function (data) {
-                var state = data['region_code']
-                if (state == "") state = "NA"
+            //$.get("https://www.freegeoip.net/json/" + ip, function (data) {
+            //    var state = data['region_code']
 
-                var tableRow;
-                if (online) {
-                    tableRow = $('<tr><td><h4>' + botName + '</h4></td><td><button type="button" class="btn btn-warning btn-sm">' + arch + '</button></td><td><button type="button" class="btn btn-danger btn-sm">' + state + '</button></td></tr>')
-                    onlineTable.append(tableRow)
-                } else {
-                    tableRow = $('<tr><td><h4>' + botName + '</h4></td><td><button type="button" class="btn btn-success btn-sm">' + lastOnline + '</button></td><td><button type="button" class="btn btn-danger btn-sm">' + state + '</button></td></tr>')
-                    offlineTable.append(tableRow)
-                }
-
-            });
+            var tableRow;
+            console.log(botName)
+            if (online) {
+                tableRow = $('<tr><td><h4>' + botName + '</h4></td><td align="center"><div  class="btn btn-warning btn-xs button-center">' + arch + '</div></td><td align="center"><div class="btn btn-danger btn-xs button-center">' + state + '</div></td></tr>')
+                onlineTableBody.append(tableRow)
+            } else {
+                tableRow = $('<tr><td><h4>' + botName + '</h4></td><td align="center"><div  class="btn btn-success btn-xs button-center">' + lastOnline + '</div></td><td align="center"><div class="btn btn-danger btn-xs button-center">' + state + '</div></td></tr>')
+                offlineTableBody.append(tableRow)
+            }
+            handleBotSelection()
+            //});
         }
     }
 
+}
+
+function updateConnectionStatus() {
+    var connectionStatus = $('ul.connection-status')
+    connectionStatus.empty()
+
+    var status;
+    if ($.cookie("bot") == null) {
+        status = $('<div class="alert alert-danger" role="alert"><a>Connected: None</a></div>')
+    } else {
+        status = $('<div class="alert alert-success" role="alert"><a>Connected: ' + $.cookie("bot") + '</a></div>')
+    }
+    connectionStatus.append(status)
 }
 
 function createDateString(rawDate) {
@@ -212,13 +234,42 @@ function createDateString(rawDate) {
     return lastOnline.toDateString();
 }
 
+function handleBotSelection() {
+    $('tbody.online').find('tr').click(function () {
+        var bot = $(this).find('td:first').text();
+        botSelected(bot)
+    });
+}
+
+//new bot selected
+function botSelected(bot) {
+    if (bot != $.cookie("bot")) {
+        $.ajax({
+            type: "POST",
+            url: "/choose",
+            data: {
+                bot: bot
+            },
+            success: function (data, status) {
+                if (status == 'success') {
+                    //updateConnectionStatus()
+                    //log()
+                    //should not need to reload!! The above should work fine but doesn't
+                    location.reload();
+                } else {
+                    console.log("Bot selection error")
+                }
+            }
+        });
+    }
+};
+
 
 /*************************************
  Document on ready          *
  *************************************/
 
 $(document).ready(function () {
-    botSelected()
     getDownloading()
     getBotList()
     toggleSidebar()
