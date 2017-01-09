@@ -82,30 +82,6 @@ body {
     display: none;
 }
 
-/*.filemanager .search:before {*/
-/*content: '';*/
-/*position: absolute;*/
-/*margin-top:12px;*/
-/*width: 10px;*/
-/*height: 11px;*/
-/*border-radius: 50%;*/
-/*border: 2px solid #ffffff;*/
-/*right: 8px;*/
-/*}*/
-
-/*.filemanager .search:after {*/
-/*content: '';*/
-/*width: 3px;*/
-/*height: 10px;*/
-/*background-color: #ffffff;*/
-/*border-radius: 2px;*/
-/*position: absolute;*/
-/*top: 23px;*/
-/*right: 6px;*/
-/*-webkit-transform: rotate(-45deg);*/
-/*transform: rotate(-45deg);*/
-/*}*/
-
 .filemanager .search {
     border-radius: 2px;
     color: #4D535E;

@@ -249,8 +249,22 @@ function sendPayload() {
  ******************************************/
 
 function setHeight() {
+    var termHeight;
     $('#terminal').height(function () {
-        return $(window).height() * 0.875;
+        termHeight = $(window).height() * 0.875;
+        return termHeight
+    });
+    terminalOffset = $('#terminal').offset().top
+    payloadDecOffset = $('div.payload-desc').offset().top
+
+    difference  = terminalOffset - payloadDecOffset
+
+    $('div.payload-desc').css('max-height', function () {
+        return termHeight + difference;
+    });
+
+    $('div.payload-desc').height(function () {
+        return termHeight + difference;
     });
 }
 

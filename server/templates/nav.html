@@ -41,21 +41,6 @@
                         </ul>
                     </li>
                 </ul>
-                <ul class="nav navbar-nav navbar-right">
-                    <li class="dropdown">
-                        <select class="form-control" id="bot" name="bot" style="width: 150px">
-                            <option value="default" disabled selected>Select bot...</option>
-                            {% for bot in bot_list %}
-                                <option value="{{ bot }}">{{ bot }}</option>
-                            {% endfor %}
-                        </select>
-                    </li>
-                </ul>
-                <ul class="nav navbar-nav navbar-right">
-                    {% if connected %}
-                        <li><a>Connected: {{ connected }}</a></li>
-                    {% endif %}
-                </ul>
                 <!--end navbar-right -->
             </li>
             <!-- /.navbar-collapse -->
