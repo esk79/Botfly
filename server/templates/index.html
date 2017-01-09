@@ -9,7 +9,7 @@
         <div class="container">
             <table class="table">
                 <tbody>
-                <tr>
+                <tr  id="main-container">
                     {#                    <div class="col-md-3 left-side">#}
                     <td class="col-md-3">
                         <ul>
@@ -56,7 +56,7 @@
 
     terminal = $('#terminal').terminal(function (command, term) {
         //no bot selected
-        if ('{{connected}}' == '') {
+        if ($.cookie("bot") == null) {
             terminal.error('No bot selected.');
             return;
         }
@@ -73,7 +73,9 @@
         greetings: 'Botfly Terminal',
         //update prompt to be name of current user
         prompt: function (callback) {
-            callback('{{connected}}> ');
+            if ( $.cookie("bot") != null) {
+                callback($.cookie("bot") + '> ');
+            }
         },
         width: 800,
         convertLinks: false,

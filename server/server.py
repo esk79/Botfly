@@ -343,27 +343,18 @@ def resend_log():
 @app.route('/finder')
 @login_required
 def finder():
-    connected = ''
-    if 'bot' in request.cookies:
-        connected = request.cookies.get('bot')
-    return flask.render_template('finder.html', async_mode=socketio.async_mode, bot_list=botnet.getOnlineConnections(),
-                                 connected=connected)
+
+    return flask.render_template('finder.html', async_mode=socketio.async_mode, bot_list=botnet.getOnlineConnections())
 
 
 @app.route('/index')
 @app.route('/')
 @login_required
 def index():
-    connected = ''
-    if 'bot' in request.cookies:
-        bot = request.cookies.get('bot')
-        if botnet.hasConnection(bot):
-            connected = request.cookies.get('bot')
     resp = flask.make_response(flask.render_template('index.html',
                                                      async_mode=socketio.async_mode,
                                                      bot_list=botnet.getOnlineConnections(),
-                                                     payload_list=botnet.getPayloadNames(),
-                                                     connected=connected))
+                                                     payload_list=botnet.getPayloadNames()))
     if 'bot' in request.cookies:
         bot = request.cookies.get('bot')
         if not botnet.hasConnection(bot):
