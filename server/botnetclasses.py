@@ -355,7 +355,7 @@ class Bot:
         self.arch = host_info['arch']
         self.ip = host_info['addr']
         self.bid = host_info['bid']
-        self.state = self.getState('50.159.66.236')
+        self.state = self.getState(host_info['addr'])
 
         self.socketio = socketio
         self.lastonline = lastonline
