@@ -212,7 +212,7 @@ function downloadFile(filename) {
 
 $(document).ready(function () {
     if ($.cookie("bot") == '' || $.cookie("bot") == null) {
-        filemanager.prepend('<div class="container no-bot"><h2>No bot selected.</h2></div>')
+        filemanager.prepend('<div class="container no-bot"><h2 style=text-align: center;">No bot selected.</h2></div>')
     } else {
         $('.no-bot').remove()
         //handle response emitted by server
