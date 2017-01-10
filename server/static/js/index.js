@@ -4,6 +4,43 @@
 
 terminalFontSize = 14;
 terminalMargin = 2;
+lastOut = []
+
+terminal = $('#terminal').terminal(function (command, term) {
+    //no bot selected
+    if ($.cookie("bot") == null) {
+        terminal.error('No bot selected.');
+        return;
+    }
+    if (command == 'kill') {
+        $.get("/kill", function (response) {
+            console.log(response)
+        })
+    }
+
+    //send terminal command to server
+    socket.emit('send_command', {data: command});
+    socket.removeAllListeners('send_command'); //Sloppy, fix this if can. should be outside terminal function ideally
+}, {
+    greetings: 'Botfly Terminal',
+    //update prompt to be name of current user
+    prompt: function (callback) {
+        if ($.cookie("bot") != null) {
+            callback($.cookie("bot") + '> ');
+        }
+    },
+    convertLinks: false,
+    tabcompletion: true,
+    completion: function (terminal, command, callback) {
+        callback(commonCommands.concat(lastOut));
+    },
+    onClear: function (terminal) {
+        $.get("/clear", function (response) {
+            console.log(response)
+        })
+    },
+});
+
 
 //sets the terminal text color and font-size
 function stdoutStyle(message) {
@@ -248,7 +285,7 @@ function setHeight() {
     terminalOffset = $('#terminal').offset().top
     payloadDecOffset = $('div.payload-desc').offset().top
 
-    difference  = terminalOffset - payloadDecOffset
+    difference = terminalOffset - payloadDecOffset
 
     $('div.payload-desc').css('max-height', function () {
         return termHeight + difference;
