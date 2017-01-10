@@ -18,6 +18,8 @@ class BotNetFileManager:
         self.fileobjs = {}
         self.lock = RLock()
         self.outputdir = outputdir
+        if not os.path.exists(self.outputdir):
+            os.makedirs(self.outputdir)
 
     def checkDatabase(self):
         with self.lock:
