@@ -251,7 +251,7 @@ function sendPayload() {
 function setHeight() {
     var termHeight;
     $('#terminal').height(function () {
-        termHeight = $(window).height() * 0.9;
+        termHeight = $(window).height() * 0.875;
         return termHeight
     });
     terminalOffset = $('#terminal').offset().top
