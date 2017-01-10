@@ -110,7 +110,6 @@ class BotNetFileManager:
                 downloaded = fileentry.curr_size
                 size = fileentry.max_size
                 fileinfo.append(dict(user=user,filename=filename,size=size,downloaded=downloaded))
-            print("getFilesAndInfo returned {} objects".format(len(fileinfo)))
             return fileinfo
 
     def getFileName(self, user, filename):
