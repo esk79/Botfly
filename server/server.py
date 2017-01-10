@@ -21,7 +21,6 @@ from itsdangerous import URLSafeTimedSerializer
 
 eventlet.monkey_patch()
 
-
 ''' See accompanying README for TODOs.
 
  To run: python server.py'''
@@ -60,6 +59,7 @@ def recreate_test_databases(engine=None, session=None):
     if not User.query.filter_by(uname='admin').first():
         UserManager.create_user('admin', 'fake@email.com', 'secret')
     botnet.checkDB()
+
 
 # Login stuff
 login_manager = LoginManager()
@@ -113,7 +113,7 @@ def change_password():
     flask.redirect(flask.url_for('index'))
 
 
-@app.route("/invite", methods=['GET','POST'])
+@app.route("/invite", methods=['GET', 'POST'])
 @login_required
 def invite():
     error = None
@@ -124,7 +124,7 @@ def invite():
         email_message = request.form.get('message')
         if valid_email(email_addr):
             link = make_link(email_addr)
-            email_message = parse.quote_plus(email_message + '\n'+link)
+            email_message = parse.quote_plus(email_message + '\n' + link)
             try:
                 msg = Message(subject=subject, recipients=[email_addr], body=email_message)
                 mail.send(msg)
@@ -155,7 +155,7 @@ def register():
         passwd1 = request.form.get('password1')
         passwd2 = request.form.get('password2')
         if passwd1 == passwd2:
-            UserManager.create_user(uname,emailaddr,passwd1)
+            UserManager.create_user(uname, emailaddr, passwd1)
             flask.flash("Account creation success!")
             return flask.redirect(flask.url_for('login'))
         else:
@@ -183,10 +183,12 @@ def make_link(emailaddr):
 def confirm_token(token):
     serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
     try:
-        email = serializer.loads(token,salt=app.config['SECURITY_PASSWORD_SALT'])
+        email = serializer.loads(token, salt=app.config['SECURITY_PASSWORD_SALT'])
         return email
     except Exception:
         return False
+
+
 # Done with login stuff
 
 
@@ -326,6 +328,7 @@ def setbot():
         resp.set_cookie('bot', request.form.get('bot'))
     return resp
 
+
 @app.route('/log', methods=['POST'])
 @login_required
 def resend_log():
@@ -343,7 +346,6 @@ def resend_log():
 @app.route('/finder')
 @login_required
 def finder():
-
     return flask.render_template('finder.html', async_mode=socketio.async_mode, bot_list=botnet.getOnlineConnections())
 
 
@@ -358,7 +360,7 @@ def index():
     if 'bot' in request.cookies:
         bot = request.cookies.get('bot')
         if not botnet.hasConnection(bot):
-            resp.set_cookie('bot','')
+            resp.set_cookie('bot', '', expires=0)
 
     if request.method == 'POST':
         resp.set_cookie('bot', request.form.get('bot'))
