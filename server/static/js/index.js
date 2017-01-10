@@ -70,15 +70,6 @@ socket.on('response', function (msg) {
     }
 });
 
-//success message received from server
-socket.on('success', function (msg) {
-    if (msg.type == 'download') {
-        increaseeDownloadsNumber()
-        getDownloading()
-    }
-    terminal.echo(stdoutStyle(msg.message))
-});
-
 //handle terminal text zoom in/out on hotkey commands
 function handleZoom() {
     hotkeys('command+=, command+-', function (event, handler) {

