@@ -1,20 +1,86 @@
 # Botfly
-- Not meant for malicious purposes, simply a P.O.C. for educational purposes
 
-### Change log
-- 2/29: Ease of use improvements. Download fixes. Now can send payloads for execution on client.py
-- 2/28: Can download from GUI. Type 'download <filename>' from terminal. Test with 'download example.txt'. This is no error handling yet and file paths are not relative as they will need to be. File upload/download redesign, no longer stored on server, instead based on bytestreams through server. Prevents above mentioned race conditions. Also implmented introductory directory listings: Work starts on GUI section.
-- 2/27: Terminal zoom in/out complete. To use, click inside terminal and use 'cmd+{plus key}' or 'cmd+{minus key}' respectively.
-- 2/27: File upload complete. Clicking "Upload File" from gui and selecting a file will upload that file to the current directory on the bot.
-  - The file is not deleted off of the server (though it should be). Would need to wait for success from bot before deleting in order to avoid possible race conditon
-- 2/27: Log Started
+Botfly is an interactive web app botnet that is comprised of two main components. The server, which is the net itself and the client which is to be run on victim machines, thus, rendering them as a ‘bot.’ The server, a Flask app, provides a web terminal to control each bot as well as prebuild Metasploit style payloads that can be launched with provided parameters. A ‘Finder’ allows the user to traverse the file system of each bot and download files from the victim machine.
 
-### Payload Ideas
-- Get current location of computer using IP
-- Install traditional backdoor
-- Install client.py script into all available word docs using macros (possibly spreading to other computers)
-- Webcam/Screenshot
-- Scan network devices, map local network
-- Fake security alert, ask for password (maybe download java application to do this?)
-- Download `.ssh/id_rsa`
-- Test connections listed in `.ssh/known_hosts` to check if any will allow connection without password (i.e. key based), if connected then upload client.py to new bot
+## Getting Started
+
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+
+### Prerequisites
+
+The Botfly server requires python 3.5 and several additional python modules. A requirements.txt file is included.
+
+```
+cd Botfly
+```
+
+```
+pip3 install -r requirements.txt
+```
+
+### Installing
+
+With the necessary requirements installed, the project should be clone and play.
+
+Clone the repo
+
+```
+git clone https://github.com/Renmusxd/Botfly.git
+```
+
+run the server
+
+```
+python3.5 runserver.py
+```
+
+By default, the server will run locally at http://127.0.0.1:5500
+
+![alt text][screenshot-index]
+
+[screenshot-index]: https://raw.githubusercontent.com/Renmusxd/Botfly/master/Screenshot-index.png?token=ALE1EtDSjG5xXeSpmysckKk6iS7TsOI0ks5YfVA4wA%3D%3D "Home Page"
+
+## Testing Bot Connection
+
+In order to test a bot connection, you can connect your localhost as a bot to the server. To do so, run client.py with python 2.7 (although python 3 should work as well)
+
+```
+cd client
+```
+
+```
+python client.py
+```
+
+You can now select the newly connected bot by choosing said bot from the botlist sidebar which can be opened using the 'Bots' button in the navbar.
+
+## Finder
+
+Botfly provides an interactive bot folder traversal mechanism that can be accessed by clicking the ‘Finder’ button in the navbar.
+
+![alt text][screenshot-finder]
+
+[screenshot-finder]: https://raw.githubusercontent.com/Renmusxd/Botfly/master/Screenshot-finder.png?token=ALE1End_ci8MHSg_hv-onfGtDxJk1Y1nks5YfVAewA%3D%3D "Home Page"
+
+## Built With
+* [Flask](http://flask.pocoo.org/) - The web framework used
+* [Socket.IO](http://socket.io/) - Used for websocket communication between  server and client
+
+## Authors
+
+* **Evan King** - *Cornell Hacking Club President*
+* **Sumner Hearth** - *Cornell Hacking Club Vice President and Treasurer*
+
+
+## Disclaimer
+
+
+Botfly, it's authors, and Cornell Hacking Club are in no way responsible for misuse or for any damage that you may cause. Botfly was created as a proof of concept for academic purposes and should be utilized as such.
+
+You agree that you use this software at your own risk.
+
+## Acknowledgments
+
+* Hat tip to anyone who's code was used from StackOverflow
+
+
