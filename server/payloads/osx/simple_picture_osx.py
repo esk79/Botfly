@@ -19,14 +19,14 @@ import sys
 #
 
 if os.system('which -s imagesnap') != 0 and os.system('which -s brew') == 0:
-    print("Installing imagesnap...")
+    print "Installing imagesnap..."
     # user does not have imagesnap, must install
     os.system('brew install imagesnap')
 
 if os.system('which -s imagesnap') == 0:
     filename = '/tmp/image-{}.png'.format(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M'))
 
-    print("Taking picture...")
+    print "Taking picture..."
     # take image and save it in tmp, then respond with output
     proc = subprocess.Popen(['imagesnap', filename],
                             stdin=subprocess.PIPE,

@@ -8,4 +8,4 @@ import os
 set_volume = "osascript -e 'set volume output volume {}'"
 os.system(set_volume.format(VOLUME))
 
-print("Volume set to {}%".format(VOLUME))
+print "Volume set to {}%".format(VOLUME)

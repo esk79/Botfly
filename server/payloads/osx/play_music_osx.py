@@ -10,7 +10,3 @@ if os.system('afplay {}'.format(FILE)) == 0:
     sys.stdout.write("Success!")
 else:
     sys.stderr.write("Error!")
-
-
-
-
