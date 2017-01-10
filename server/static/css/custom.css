@@ -11,6 +11,10 @@ html, body {
     height: 100%;
 }
 
+.no-bot h2 {
+    text-align: center;
+}
+
 /*-------------------------
 	Download dropdown
 -------------------------*/
