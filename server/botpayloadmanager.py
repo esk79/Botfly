@@ -12,13 +12,16 @@ class BotNetPayloadManager:
         self.payloaddescriptions = {}
         self.payloadfiles = {}
         self.payloadpath = payloadpath
-        for root, dirs, files in os.walk(self.payloadpath):
-            for file in files:
-                if file.endswith(BotNetPayloadManager.PAYLOAD_EXT):
-                    filepath = os.path.join(root, file)
-                    name, desc = self.parsePayload(filepath)
-                    self.payloaddescriptions[name] = desc
-                    self.payloadfiles[name] = filepath
+        if not os.path.exists(self.payloadpath):
+            os.makedirs(self.payloadpath)
+        else:
+            for root, dirs, files in os.walk(self.payloadpath):
+                for file in files:
+                    if file.endswith(BotNetPayloadManager.PAYLOAD_EXT):
+                        filepath = os.path.join(root, file)
+                        name, desc = self.parsePayload(filepath)
+                        self.payloaddescriptions[name] = desc
+                        self.payloadfiles[name] = filepath
 
     def getPayloads(self):
         return self.payloaddescriptions
