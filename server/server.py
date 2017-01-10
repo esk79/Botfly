@@ -59,7 +59,7 @@ def recreate_test_databases(engine=None, session=None):
     db.create_all()
     if not User.query.filter_by(uname='admin').first():
         UserManager.create_user('admin', 'fake@email.com', 'secret')
-
+    botnet.checkDB()
 
 # Login stuff
 login_manager = LoginManager()

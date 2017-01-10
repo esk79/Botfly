@@ -41,6 +41,9 @@ class BotNet(Thread):
         self.payloadmanager = BotNetPayloadManager(payloadpath)
         self.downloaddir = downloadpath
 
+    def checkDB(self):
+        self.filemanager.checkDatabase()
+
     def hasConnection(self, user):
         with self.connlock:
             if user in self.offlineConnections:
