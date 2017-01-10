@@ -518,6 +518,7 @@ def serve(sock):
                 filename = recvjson[FILE_CLOSE]
                 if filename in fileobjs:
                     fileobjs[filename].close()
+                    fileobjs.pop(filename)
 
             # It is important that CLIENT_CLOSE comes *after* CLIENT_STREAM
             if CLIENT_STREAM in recvjson:
