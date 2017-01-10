@@ -26,6 +26,15 @@ socket.on('disconnect', function (msg) {
     }
 });
 
+//success message received from server
+socket.on('success', function (msg) {
+    if (msg.type == 'download') {
+        increaseeDownloadsNumber()
+        getDownloading()
+    }
+    terminal.echo(stdoutStyle(msg.message))
+});
+
 /*************************************
  Downloads dropdown code begins here *
  *************************************/
