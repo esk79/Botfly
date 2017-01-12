@@ -186,7 +186,6 @@ class BotNetFileManager:
                 except Exception as e:
                     print(e)
 
-                print(FilenameEntry.query.filter_by(user=user, remote_filename=filename).first())
                 return True
             return False
 
