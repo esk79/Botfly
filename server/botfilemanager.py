@@ -72,27 +72,27 @@ class BotNetFileManager:
         uf = (user, filename)
         with self.lock:
             entry = FilenameEntry.query.filter_by(user=user, remote_filename=filename).first()
+            print(entry)
             # If this file is not in the database create an entry
             if entry is None:
                 real_filename = os.path.join(self.outputdir, str(uuid.uuid4()))
                 while os.path.exists(real_filename):
                     real_filename = os.path.join(self.outputdir, str(uuid.uuid4()))
-                newentry = FilenameEntry(user, filename, real_filename, startcurrsize=len(wbytes))
-                db.session.add(newentry)
+                entry = FilenameEntry(user, filename, real_filename, startcurrsize=len(wbytes))
+                db.session.add(entry)
             # If the file is in the database, change its stats
             else:
                 real_filename = entry.real_filename
-                if uf in self.fileobjs:
-                    entry.curr_size += len(wbytes)
-                else:
-                    entry.curr_size = len(wbytes)
-            db.session.commit()
 
             # If the file object hasn't been made, make it
             if uf not in self.fileobjs:
+                entry.curr_size = 0
                 self.fileobjs[uf] = open(real_filename, "wb")
             if not self.fileobjs[uf].closed:
+                entry.curr_size += len(wbytes)
                 self.fileobjs[uf].write(wbytes)
+
+            db.session.commit()
 
     def closeFile(self, user, filename):
         '''
@@ -121,15 +121,18 @@ class BotNetFileManager:
                 real_filename = os.path.join(self.outputdir, str(uuid.uuid4()))
                 while os.path.exists(real_filename):
                     real_filename = os.path.join(self.outputdir, str(uuid.uuid4()))
-                newentry = FilenameEntry(user, filename, real_filename, 0, filesize)
-                db.session.add(newentry)
+                entry = FilenameEntry(user, filename, real_filename, 0, filesize)
+                db.session.add(entry)
             else:
                 entry.max_size = filesize
                 real_filename = entry.real_filename
-            db.session.commit()
 
             if uf not in self.fileobjs:
+                entry.curr_size = 0
                 self.fileobjs[uf] = open(real_filename, "wb")
+
+            db.session.commit()
+
 
     def getFilesAndInfo(self):
         '''
