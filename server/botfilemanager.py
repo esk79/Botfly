@@ -71,28 +71,28 @@ class BotNetFileManager:
         '''
         uf = (user, filename)
         with self.lock:
-            entry = FilenameEntry.query.filter_by(user=user, remote_filename=filename).first()
-            print(entry)
-            # If this file is not in the database create an entry
-            if entry is None:
-                real_filename = os.path.join(self.outputdir, str(uuid.uuid4()))
-                while os.path.exists(real_filename):
+            if uf not in self.fileobjs or not self.fileobjs[uf].closed:
+                entry = FilenameEntry.query.filter_by(user=user, remote_filename=filename).first()
+                # If this file is not in the database create an entry
+                if entry is None:
                     real_filename = os.path.join(self.outputdir, str(uuid.uuid4()))
-                entry = FilenameEntry(user, filename, real_filename, startcurrsize=len(wbytes))
-                db.session.add(entry)
-            # If the file is in the database, change its stats
-            else:
-                real_filename = entry.real_filename
+                    while os.path.exists(real_filename):
+                        real_filename = os.path.join(self.outputdir, str(uuid.uuid4()))
+                    entry = FilenameEntry(user, filename, real_filename, startcurrsize=len(wbytes))
+                    db.session.add(entry)
+                # If the file is in the database, change its stats
+                else:
+                    real_filename = entry.real_filename
 
-            # If the file object hasn't been made, make it
-            if uf not in self.fileobjs:
-                entry.curr_size = 0
-                self.fileobjs[uf] = open(real_filename, "wb")
-            if not self.fileobjs[uf].closed:
+                # If the file object hasn't been made, make it
+                if uf not in self.fileobjs:
+                    entry.curr_size = 0
+                    self.fileobjs[uf] = open(real_filename, "wb")
+
                 entry.curr_size += len(wbytes)
                 self.fileobjs[uf].write(wbytes)
 
-            db.session.commit()
+                db.session.commit()
 
     def closeFile(self, user, filename):
         '''
@@ -158,7 +158,6 @@ class BotNetFileManager:
         :param filename: remote filename
         :return: local filename or None
         '''
-        uf = (user, filename)
         with self.lock:
             entry = FilenameEntry.query.filter_by(user=user, remote_filename=filename).first()
             if entry is not None:
@@ -186,6 +185,8 @@ class BotNetFileManager:
                     os.remove(real_filename)
                 except Exception as e:
                     print(e)
+
+                print(FilenameEntry.query.filter_by(user=user, remote_filename=filename).first())
                 return True
             return False
 
