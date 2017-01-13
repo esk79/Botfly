@@ -116,7 +116,7 @@ function uploadFile() {
 };
 
 //upload a file to the server
-function uploadFile() {
+function uploadPayload() {
     $('#upload-payload').change(function () {
         var form_data = new FormData($('#upload-payload')[0]);
         $.ajax({
@@ -131,13 +131,30 @@ function uploadFile() {
                     getPayloads()
                     terminal.echo(stdoutStyle("Payload upload successful."))
                 } else {
-                    terminal.error(stdoutStyle("Payload upload failed"))
+                    terminal.error("Payload upload failed")
                 }
             },
         });
     });
 };
 
+//upload a file to the server
+function deletePayload(payload) {
+    $.ajax({
+        type: 'DELETE',
+        url: '/payload',
+        data: {"payload": payload},
+        success: function (data) {
+            if (JSON.parse(data).success) {
+                getPayloads()
+                terminal.echo(stdoutStyle("Payload deletion successful."))
+            } else {
+                terminal.error("Payload deletion failed")
+            }
+        },
+    });
+
+};
 
 
 /******************************************
@@ -354,4 +371,5 @@ $(document).ready(function () {
     log()
     setTerminalTextSize()
     uploadFile()
+    uploadPayload()
 });

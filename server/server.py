@@ -285,7 +285,7 @@ def download_file():
             return "No file selected", 404
 
 
-@app.route('/payload', methods=['GET', 'POST'])
+@app.route('/payload', methods=['GET', 'POST', 'DELETE'])
 @login_required
 def payload_launch():
     if request.method == 'POST':
@@ -312,7 +312,15 @@ def payload_launch():
         payloadstr = json.dumps(botnet.getPayloads())
         return flask.Response(payloadstr, status=200, mimetype='application/json')
 
-# comment so i can push
+    elif request.method == 'DELETE':
+        if 'payload' in request.form:
+            payload_name = request.form.get('payload')
+            if botnet.payloadmanager.deletePayload(payload_name):
+                return json.dumps({"success": True})
+            else:
+                return json.dumps({"success": False})
+
+
 @app.route('/ls', methods=['GET', 'POST'])
 @login_required
 def list_dir():
