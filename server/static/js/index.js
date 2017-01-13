@@ -115,6 +115,30 @@ function uploadFile() {
     });
 };
 
+//upload a file to the server
+function uploadFile() {
+    $('#upload-payload').change(function () {
+        var form_data = new FormData($('#upload-payload')[0]);
+        $.ajax({
+            type: 'POST',
+            url: '/payload',
+            data: form_data,
+            contentType: false,
+            cache: false,
+            processData: false,
+            success: function (data) {
+                if (JSON.parse(data).success) {
+                    getPayloads()
+                    terminal.echo(stdoutStyle("Payload upload successful."))
+                } else {
+                    terminal.error(stdoutStyle("Payload upload failed"))
+                }
+            },
+        });
+    });
+};
+
+
 
 /******************************************
  Payload dictionary functions begins here *
@@ -125,6 +149,7 @@ var payloadsList = null;
 // get current payload information
 function getPayloads() {
     $.get("/payload", function (data, status) {
+        console.log(data)
         saveData(data)
         populateDictionary(data)
         sendPayload()

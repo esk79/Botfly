@@ -11,6 +11,14 @@ html, body {
     height: 100%;
 }
 
+.payload-button {
+    margin-left: 5px !important;
+}
+
+.payload-button:hover {
+    background-color: #d9534f;
+}
+
 /*-------------------------
 	Download dropdown
 -------------------------*/

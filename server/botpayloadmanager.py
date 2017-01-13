@@ -5,13 +5,16 @@ import json
 
 class BotNetPayloadManager:
     PAYLOAD_EXT = '.py'
-    COMMENT_DELIMIT = ['"""',"'''"]
+    COMMENT_DELIMIT = ['"""', "'''"]
     VAR_DENOTE = 'VAR'
 
     def __init__(self, payloadpath):
         self.payloaddescriptions = {}
         self.payloadfiles = {}
         self.payloadpath = payloadpath
+        self.loadPayloads()
+
+    def loadPayloads(self):
         if not os.path.exists(self.payloadpath):
             os.makedirs(self.payloadpath)
         else:
@@ -29,35 +32,35 @@ class BotNetPayloadManager:
     def getPayloadNames(self):
         return [payload for payload in self.payloaddescriptions.keys()]
 
-    def parsePayload(self,payloadpath):
-        with open(payloadpath,"r") as f:
+    def parsePayload(self, payloadpath):
+        with open(payloadpath, "r") as f:
             payloadlines = f.readlines()
-        payloaddict = dict(name=payloadpath[len(self.payloadpath)+1:-len(BotNetPayloadManager.PAYLOAD_EXT)],
+        payloaddict = dict(name=payloadpath[len(self.payloadpath) + 1:-len(BotNetPayloadManager.PAYLOAD_EXT)],
                            description='',
                            vars={})
         try:
             if payloadlines[0].strip() in BotNetPayloadManager.COMMENT_DELIMIT:
-                for i in range(1,len(payloadlines)):
+                for i in range(1, len(payloadlines)):
                     payloadline = payloadlines[i].strip()
                     if payloadline in BotNetPayloadManager.COMMENT_DELIMIT:
                         break
                     elif ':' in payloadline:
                         indx = payloadline.index(':')
-                        lhs, rhs = payloadline[:indx].strip(), payloadline[indx+1:].strip()
+                        lhs, rhs = payloadline[:indx].strip(), payloadline[indx + 1:].strip()
                         if lhs.startswith(BotNetPayloadManager.VAR_DENOTE):
                             var = lhs[len(BotNetPayloadManager.VAR_DENOTE):].strip()
                             defval = None
                             if '=' in var:
                                 eqindx = var.index('=')
-                                defval = var[eqindx+1:].strip()
+                                defval = var[eqindx + 1:].strip()
                                 var = var[:eqindx].strip()
-                            payloaddict['vars'][var] = {'description':rhs}
+                            payloaddict['vars'][var] = {'description': rhs}
                             if defval is not None:
                                 payloaddict['vars'][var]['default_value'] = defval
                         else:
                             payloaddict[lhs.lower()] = rhs
         except Exception as e:
-            sys.stderr.write("[!] Error parsing {}: {}\n".format(payloadpath,str(e)))
+            sys.stderr.write("[!] Error parsing {}: {}\n".format(payloadpath, str(e)))
             sys.stderr.flush()
         return payloaddict['name'], payloaddict
 
@@ -67,12 +70,12 @@ class BotNetPayloadManager:
         vars = self.payloaddescriptions[payload]['vars']
         vartext = ""
         for reqvar in vars.keys():
-            if reqvar in args and len(args[reqvar])>0:
+            if reqvar in args and len(args[reqvar]) > 0:
                 arg = json.dumps(args[reqvar])
-                vartext += '{}={}\n'.format(reqvar,arg)
+                vartext += '{}={}\n'.format(reqvar, arg)
             elif 'default_value' in vars[reqvar]:
                 arg = json.dumps(vars[reqvar]['default_value'])
                 vartext += '{}={}\n'.format(reqvar, arg)
-        with open(self.payloadfiles[payload],"r") as f:
+        with open(self.payloadfiles[payload], "r") as f:
             payloadtext = f.read()
             return vartext + payloadtext

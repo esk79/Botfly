@@ -12,7 +12,7 @@
                     <ul>
                         <form id="upload-file" method="post" enctype="multipart/form-data">
                             <fieldset>
-                                <label class="btn btn-primary btn-block btn-file ">
+                                <label class="btn btn-primary btn-block btn-file">
                                     Upload File <input name="file" type="file" style="display: none;">
                                 </label>
                             </fieldset>
@@ -20,9 +20,19 @@
                     </ul>
                     <ul>
                         <div class="well">
-                            <div class="row error">
+                            <div class="row error input-group">
                                 <input type="search" class="search-query form-control search-payload"
                                        placeholder="Search payloads..."/>
+                                <span class="input-group-btn">
+                                <form id="upload-payload" method="post" enctype="multipart/form-data">
+                                    <fieldset>
+                                        <label class="btn btn-default btn-danger payload-button" title="Upload Payload">
+                                            <i class="glyphicon glyphicon-plus"></i> <input name="file" type="file"
+                                                                                            style="display: none;">
+                                        </label>
+                                    </fieldset>
+                                </form>
+                                    </span>
                             </div>
 
                             <div class="row payload-desc">
