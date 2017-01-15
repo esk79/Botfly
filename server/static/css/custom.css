@@ -269,29 +269,29 @@ ul.sidebar-nav a:hover, a:focus {
     word-wrap: break-word
 }
 
-/*@media (max-width: 767px) {*/
+@media (max-width: 767px) {
 
-/*#wrapper {*/
-/*padding-left: 0;*/
-/*}*/
+    #wrapper {
+        padding-left: 0;
+    }
 
-/*#sidebar-wrapper {*/
-/*left: 0;*/
-/*}*/
+    #sidebar-wrapper {
+        left: 0;
+    }
 
-/*#wrapper.active {*/
-/*position: relative;*/
-/*left: 400px;*/
-/*}*/
+    #wrapper.active {
+        position: relative;
+        left: 400px;
+    }
 
-/*#wrapper.active #sidebar-wrapper {*/
-/*left: 400px;*/
-/*width: 400px;*/
-/*transition: all 0.4s ease 0s;*/
-/*}*/
+    #wrapper.active #sidebar-wrapper {
+        left: 400px;
+        width: 400px;
+        transition: all 0.4s ease 0s;
+    }
 
-/*#menu-toggle {*/
-/*display: inline-block;*/
-/*}*/
+    #menu-toggle {
+        display: inline-block;
+    }
 
-/*}*/
+}

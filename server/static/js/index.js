@@ -166,7 +166,6 @@ var payloadsList = null;
 // get current payload information
 function getPayloads() {
     $.get("/payload", function (data, status) {
-        console.log(data)
         saveData(data)
         populateDictionary(data)
         sendPayload()
