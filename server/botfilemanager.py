@@ -134,7 +134,7 @@ class BotNetFileManager:
             db.session.commit()
 
 
-    def getFilesAndInfo(self):
+    def getFilesAndInfo(self,static='static/'):
         '''
         Creates a list of fileinfo objects with {user, filename, size, downloaded}
         :return: dict(user=user,filename=filename,size=size,downloaded=downloaded) for each
@@ -148,7 +148,8 @@ class BotNetFileManager:
                 filename = fileentry.remote_filename
                 downloaded = fileentry.curr_size
                 size = fileentry.max_size
-                fileinfo.append(dict(user=user,filename=filename,size=size,downloaded=downloaded))
+                file_url = static + fileentry.real_filename
+                fileinfo.append(dict(user=user,filename=filename,size=size,downloaded=downloaded,file_url=file_url))
             return fileinfo
 
     def getFileName(self, user, filename):

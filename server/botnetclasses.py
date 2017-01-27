@@ -26,7 +26,7 @@ class BotNet(Thread):
     FILESIZE_JSON = 'filesize'
 
     DEFAULT_PAYLOAD = os.path.join(os.path.dirname(__file__), 'payloads')
-    DEFAULT_DOWNLOADPATH = os.path.join(os.path.join(os.path.dirname(__file__), 'media'), 'downloads')
+    DEFAULT_DOWNLOADPATH = os.path.join(os.path.join(os.path.dirname(__file__), 'static'), 'downloads')
 
     def __init__(self, socketio, app, payloadpath=DEFAULT_PAYLOAD, downloadpath=DEFAULT_DOWNLOADPATH):
         super().__init__()
