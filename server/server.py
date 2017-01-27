@@ -455,6 +455,6 @@ def main():
     botserver.start()
 
     if USE_SSL_FLASK:
-        socketio.run(app, debug=True, use_reloader=False, certfile=CERT_FILE, keyfile=KEY_FILE, port=80, host='0.0.0.0')
+        socketio.run(app, debug=True, use_reloader=False, certfile=CERT_FILE, keyfile=KEY_FILE, port=1111, host='0.0.0.0')
     else:
-        socketio.run(app, debug=True, use_reloader=False, port=80, host='0.0.0.0')
+        socketio.run(app, debug=True, use_reloader=False, port=1111, host='0.0.0.0')
