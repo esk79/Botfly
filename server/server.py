@@ -54,14 +54,14 @@ thread = None
 
 
 # DB stuff
+
+
 @app.before_first_request
 def recreate_test_databases(engine=None, session=None):
     db.create_all()
-    password = os.environ['ADMIN_PASS']
     if not User.query.filter_by(uname='admin').first():
-        UserManager.create_user('admin', 'fake@email.com', password)
+        UserManager.create_user('admin', 'fake@email.com', os.environ['ADMIN_PASS'])
     botnet.checkDB()
-
 
 # Login stuff
 login_manager = LoginManager()
