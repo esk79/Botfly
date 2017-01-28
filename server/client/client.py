@@ -21,7 +21,7 @@ except:
 
 __version__ = "1.0"
 
-HOST = 'localhost'
+HOST = '50.159.66.236'
 PORT = 1708
 HOSTINFOFILE = '.host'
 IDFILE = '.id'

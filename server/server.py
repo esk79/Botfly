@@ -39,8 +39,8 @@ async_mode = None
 
 app = flask.Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['SECRET_KEY'] = 'secret!'
-app.config['SECURITY_PASSWORD_SALT'] = 'secret_salt!'
+app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
+app.config['SECURITY_PASSWORD_SALT'] = os.environ['SECRET_SALT']
 
 DB_LOC = 'test.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_LOC
@@ -60,7 +60,7 @@ thread = None
 def recreate_test_databases(engine=None, session=None):
     db.create_all()
     if not User.query.filter_by(uname='admin').first():
-        UserManager.create_user('admin', 'fake@email.com', 'secret')
+        UserManager.create_user('admin', 'fake@email.com', os.environ['ADMIN_PASS'])
     botnet.checkDB()
 
 
