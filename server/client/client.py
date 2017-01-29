@@ -644,7 +644,8 @@ def install_osx(host, port):
     if script_path is None:
         return False
     # Install host information
-    with open(os.path.join(script_path,HOSTINFOFILE),"w") as f:
+    script_dir = os.path.dirname(script_path)
+    with open(os.path.join(script_dir,HOSTINFOFILE),"w") as f:
         f.write(host + "\n")
         f.write(str(port))
 
