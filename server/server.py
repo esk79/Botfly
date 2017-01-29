@@ -43,7 +43,7 @@ app.config['SECRET_KEY'] = os.environ['SECRET_KEY']
 app.config['SECURITY_PASSWORD_SALT'] = os.environ['SECRET_SALT']
 
 DB_LOC = 'test.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + DB_LOC
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' +  os.path.join(BASEDIR, DB_LOC)
 socketio = SocketIO(app, async_mode=async_mode)
 db.init_app(app)
 
