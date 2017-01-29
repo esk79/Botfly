@@ -27,7 +27,7 @@ eventlet.monkey_patch()
 
  To run: python server.py'''
 
-DEBUG = True
+DEBUG = False
 HOSTNAME = 'botfly'
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = 'payloads/'
