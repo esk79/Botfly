@@ -20,8 +20,8 @@ socket.on('disconnect', function (msg) {
     $('li.notifications').append('<a class="disconn-' + msg.user + '">' + 'Lost connection to: ' + msg.user + '</a>');
     $('.disconn-' + msg.user).fadeOut(5000);
     getBotList()
+    $.removeCookie('bot', {path: '/'});
     if ($('#bot > option').length == 1 || $("#bot").val() == msg.user) {
-        $.removeCookie('bot', {path: '/'});
         location.reload();
     }
 });
