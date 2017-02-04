@@ -22,4 +22,4 @@ os.system(set_volume.format(VOLUME))
 os.system('say "{}"'.format(TEXT))
 os.system(set_volume.format(vol))
 
-print "Successfully said: {}".format(TEXT)
+print("Successfully said: {}".format(TEXT))
