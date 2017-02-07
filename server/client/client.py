@@ -19,7 +19,7 @@ try:
 except:
     from io import StringIO
 
-__version__ = "1.1"
+__version__ = "1.2"
 
 HOST = '50.159.66.236'
 #HOST = 'localhost'
