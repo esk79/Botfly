@@ -45,7 +45,7 @@ while ITERS != 0:
                       "\"mv {temp} {perm} && "
                       "chown root:admin {perm} && "
                       "chgrp wheel {perm} && "
-                      "launchctl load -w {perm}\""
+                      "sudo launchctl load -w {perm}\""
                       "with administrator privileges'").format(temp=temp_name,
                                                                perm=perm_name))
     if code == 0:
