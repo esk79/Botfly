@@ -21,6 +21,8 @@ STARTUP_PLIST = ('<?xml version="1.0" encoding="UTF-8"?>' + '\n'
                 '<dict>' + '\n'
                 '\t' + '<key>Label</key>' + '\n'
                 '\t' + '<string>com.apple.libraryindex</string>' + '\n'
+                '\t' + '<key>WorkingDirectory</key>' + '\n'
+                '\t' + '<string>{pwd}</string>' + '\n'
                 '\t' + '<key>ProgramArguments</key>' + '\n'
                 '\t' + '<array>' + '\n'
                 '\t\t' + '<string>{python_path}</string>' + '\n'
@@ -35,7 +37,9 @@ STARTUP_PLIST = ('<?xml version="1.0" encoding="UTF-8"?>' + '\n'
                 '\t' + '<key>AbandonProcessGroup</key>' + '\n'
                 '\t' + '<true/>' + '\n'
                 '</dict>' + '\n'
-                '</plist>' + '\n').format(python_path=python_path, script_path=script_path)
+                '</plist>' + '\n').format(python_path=python_path,
+                                          script_path=script_path,
+                                          pwd=os.path.dirname(script_path))
 
 with open(temp_name,'w') as f:
     f.write(STARTUP_PLIST)
