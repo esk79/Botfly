@@ -76,8 +76,11 @@ class BotNet(Thread):
                 print("\tRestored!")
             else:
                 conn = Bot(clientsock, host_info, self.socketio)
-            if conn.bid is None:
-                conn.setId(str(uuid.uuid4()))
+            if not host_info['bid']:
+                if conn.bid is None:
+                    conn.setId(str(uuid.uuid4()))
+                else:
+                    conn.setId(conn.bid)
             self.onlineConnections[user] = conn
             self.logs[user] = BotLog(user)
             self.conncon.notifyAll()
