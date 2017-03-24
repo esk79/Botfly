@@ -122,7 +122,7 @@ function checkUpdateDownloads() {
 
 
 /*************************************
- Bot List sidebar          *
+           Bot List sidebar          *
  *************************************/
 
 
