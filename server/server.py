@@ -28,7 +28,7 @@ eventlet.monkey_patch()
  To run: python server.py'''
 
 DEBUG = False
-HOSTNAME = 'botfly'
+HOSTNAME = 'botfly.me'
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
 UPLOAD_FOLDER = 'payloads/'
 DOWNLOAD_FOLDER = 'static/downloads/'

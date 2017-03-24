@@ -38,7 +38,7 @@ By default, the server will run locally at http://127.0.0.1:5500
 
 ![alt text][screenshot-index]
 
-[screenshot-index]: https://raw.githubusercontent.com/Renmusxd/Botfly/master/Screenshot-index.png?token=ALE1EtDSjG5xXeSpmysckKk6iS7TsOI0ks5YfVA4wA%3D%3D "Home Page"
+[screenshot-index]: Screenshot-index.png "Home Page"
 
 ## Testing Bot Connection
 
@@ -60,7 +60,7 @@ Botfly provides an interactive bot folder traversal mechanism that can be access
 
 ![alt text][screenshot-finder]
 
-[screenshot-finder]: https://raw.githubusercontent.com/Renmusxd/Botfly/master/Screenshot-finder.png?token=ALE1End_ci8MHSg_hv-onfGtDxJk1Y1nks5YfVAewA%3D%3D "Home Page"
+[screenshot-finder]: Screenshot-finder.png "Home Page"
 
 ## Built With
 * [Flask](http://flask.pocoo.org/) - The web framework used
